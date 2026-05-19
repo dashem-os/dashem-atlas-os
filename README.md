@@ -98,3 +98,33 @@ Golden rule: no important action happens outside the timeline. The operational e
 - `WorkOrderClosed`
 
 Additional operational events such as `AssetUpdated`, `ChecklistItemUpdated`, `CommentAdded`, and `WorkOrderStatusChanged` also project into the same timeline.
+
+## Sprint 2: Intelligence Layer
+
+Sprint 2 adds assistive AI for work orders while preserving the event-driven core. The AI reads operational memory from the timeline and writes suggestions back as events. It does not approve, close, or execute critical actions.
+
+Endpoints:
+
+- `POST /ai/work-orders/:id/diagnosis`
+- `POST /ai/work-orders/:id/checklist`
+- `POST /ai/work-orders/:id/risk`
+- `POST /ai/work-orders/:id/budget-draft`
+- `POST /ai/work-orders/:id/summary`
+- `POST /ai/work-orders/:id/report`
+
+Request body:
+
+```json
+{
+  "organizationId": "org_demo"
+}
+```
+
+AI operational events:
+
+- `AiDiagnosisSuggested`
+- `AiChecklistGenerated`
+- `AiRiskClassified`
+- `AiBudgetDrafted`
+- `AiTimelineSummarized`
+- `TechnicalReportGenerated`

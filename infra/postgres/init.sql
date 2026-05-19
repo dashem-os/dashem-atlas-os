@@ -105,3 +105,15 @@ create index if not exists assets_org_idx
 
 create index if not exists work_orders_org_state_idx
   on work_orders (organization_id, state, updated_at desc);
+
+create table if not exists ai_artifacts (
+  id text primary key,
+  organization_id text not null references organizations(id),
+  work_order_id text not null references work_orders(id),
+  kind text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists ai_artifacts_work_order_idx
+  on ai_artifacts (organization_id, work_order_id, created_at desc);

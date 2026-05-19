@@ -23,7 +23,16 @@ import {
   InMemoryTimelineRepository,
   type AddTimelineEntryCommand
 } from "@atlas/module-timeline";
-import { requestAiTask } from "@atlas/module-ai";
+import {
+  classifyRisk,
+  draftBudget,
+  generateChecklist,
+  generateTechnicalReport,
+  requestAiTask,
+  suggestDiagnosis,
+  summarizeTimeline,
+  type AiWorkOrderMemory
+} from "@atlas/module-ai";
 import { decideBudget, requestApproval } from "@atlas/module-workflow";
 
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
@@ -102,6 +111,28 @@ async function findAssetOrThrow(id: EntityId, organizationId: OrganizationId): P
 
 async function findWorkOrderOrThrow(id: EntityId, organizationId: OrganizationId): Promise<WorkOrder> {
   return assertWorkOrderTenant(await workOrders.findById(id), organizationId, id);
+}
+
+async function buildAiMemory(workOrderId: EntityId, organizationId: OrganizationId): Promise<AiWorkOrderMemory> {
+  const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+  const asset = await findAssetOrThrow(workOrder.assetId, organizationId);
+  const entries = await timeline.list({ organizationId, subjectId: workOrder.id, limit: 100 });
+
+  return {
+    organizationId,
+    subjectId: workOrder.id,
+    assetKind: asset.kind,
+    assetCriticality: asset.criticality,
+    workOrderTitle: workOrder.title,
+    ...(workOrder.description ? { workOrderDescription: workOrder.description } : {}),
+    priority: workOrder.priority,
+    timeline: entries.map((entry) => ({
+      title: entry.title,
+      eventName: entry.eventName,
+      occurredAt: entry.occurredAt,
+      ...(entry.body ? { body: entry.body } : {})
+    }))
+  };
 }
 
 const server = createServer(async (request, response) => {
@@ -382,6 +413,51 @@ const server = createServer(async (request, response) => {
       );
       send(response, 201, { task, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: payload.subjectId }) });
       return;
+    }
+
+    const aiWorkOrderMatch = url.pathname.match(/^\/ai\/work-orders\/([^/]+)\/([^/]+)$/);
+    if (request.method === "POST" && aiWorkOrderMatch) {
+      const workOrderId = aiWorkOrderMatch[1] as EntityId;
+      const action = aiWorkOrderMatch[2];
+      const payload = await readJson<{ organizationId: OrganizationId }>(request);
+      const memory = await buildAiMemory(workOrderId, payload.organizationId);
+      const ctx = context(request, payload.organizationId);
+
+      if (action === "diagnosis") {
+        const diagnosis = await suggestDiagnosis(memory, ctx, bus);
+        send(response, 201, { diagnosis, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+
+      if (action === "checklist") {
+        const checklist = await generateChecklist(memory, ctx, bus);
+        send(response, 201, { checklist, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+
+      if (action === "risk") {
+        const risk = await classifyRisk(memory, ctx, bus);
+        send(response, 201, { risk, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+
+      if (action === "budget-draft") {
+        const budgetDraft = await draftBudget(memory, ctx, bus);
+        send(response, 201, { budgetDraft, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+
+      if (action === "summary") {
+        const summary = await summarizeTimeline(memory, ctx, bus);
+        send(response, 201, { summary, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+
+      if (action === "report") {
+        const report = await generateTechnicalReport(memory, ctx, bus);
+        send(response, 201, { report, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
     }
 
     if (request.method === "POST" && url.pathname === "/workflow/approvals") {

@@ -78,12 +78,12 @@ const html = String.raw`<!doctype html>
     <main>
       <nav>
         <h1>Atlas OS</h1>
-        <p>Sprint 1: ativos, OS, evidencias, checklist, IA, orcamento, workflow e timeline operacional.</p>
+        <p>Sprint 2: camada de inteligencia assistiva para OS, sempre registrada na timeline.</p>
       </nav>
       <section>
         <header>
           <div>
-            <h2>Operational Work Orders</h2>
+            <h2>Intelligence Layer</h2>
             <p>Nada importante acontece fora da timeline.</p>
           </div>
           <div class="status">
@@ -108,6 +108,12 @@ const html = String.raw`<!doctype html>
               <button class="secondary" id="evidence">Anexar evidencia</button>
               <button class="secondary" id="comment-add">Comentar</button>
               <button class="secondary" id="ai">Sugerir IA</button>
+              <button class="secondary" id="ai-diagnosis">Diagnostico</button>
+              <button class="secondary" id="ai-checklist">Checklist IA</button>
+              <button class="secondary" id="ai-risk">Risco</button>
+              <button class="secondary" id="ai-budget">Orcamento IA</button>
+              <button class="secondary" id="ai-summary">Resumo</button>
+              <button class="secondary" id="ai-report">Relatorio</button>
               <button class="secondary" id="budget">Aprovar orcamento</button>
               <button class="secondary" id="close">Fechar OS</button>
             </div>
@@ -194,6 +200,21 @@ const html = String.raw`<!doctype html>
         await call("/ai/suggestions", { method: "POST", body: JSON.stringify({ organizationId: val("#org"), subjectId: val("#wo"), suggestion: "IA sugeriu cavitacao: verificar ruido, vibracao e historico do equipamento." }) });
         await refresh();
       });
+
+      async function aiAction(action) {
+        await call("/ai/work-orders/" + encodeURIComponent(val("#wo")) + "/" + action, {
+          method: "POST",
+          body: JSON.stringify({ organizationId: val("#org") })
+        });
+        await refresh();
+      }
+
+      document.querySelector("#ai-diagnosis").addEventListener("click", () => aiAction("diagnosis"));
+      document.querySelector("#ai-checklist").addEventListener("click", () => aiAction("checklist"));
+      document.querySelector("#ai-risk").addEventListener("click", () => aiAction("risk"));
+      document.querySelector("#ai-budget").addEventListener("click", () => aiAction("budget-draft"));
+      document.querySelector("#ai-summary").addEventListener("click", () => aiAction("summary"));
+      document.querySelector("#ai-report").addEventListener("click", () => aiAction("report"));
 
       document.querySelector("#budget").addEventListener("click", async () => {
         await call("/maintenance/work-orders/" + encodeURIComponent(val("#wo")) + "/budget", { method: "POST", body: JSON.stringify({ organizationId: val("#org"), amount: 2480, currency: "BRL", notes: "Troca preventiva aprovada para evitar parada." }) });

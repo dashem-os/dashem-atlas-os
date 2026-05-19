@@ -236,7 +236,7 @@ function inferKind(event: DomainEvent): TimelineEntryKind {
     return "attachment";
   }
 
-  if (event.name.startsWith("ai.")) {
+  if (event.name.startsWith("ai.") || event.name.startsWith("Ai")) {
     return "ai_suggestion";
   }
 
@@ -264,6 +264,12 @@ function inferTitle(event: DomainEvent): string {
     ChecklistItemUpdated: "Checklist atualizado",
     CommentAdded: "Comentario adicionado",
     AiSuggestionCreated: "IA sugeriu intervencao",
+    AiDiagnosisSuggested: "IA sugeriu diagnostico",
+    AiChecklistGenerated: "IA gerou checklist sugerido",
+    AiRiskClassified: "IA classificou risco",
+    AiBudgetDrafted: "IA gerou orcamento preliminar",
+    AiTimelineSummarized: "IA resumiu timeline",
+    TechnicalReportGenerated: "Relatorio tecnico gerado",
     BudgetSubmitted: "Orcamento enviado",
     BudgetApproved: "Orcamento aprovado",
     BudgetRejected: "Orcamento reprovado",
