@@ -20,6 +20,15 @@ export interface RequestApprovalCommand {
   readonly requestedBy: UserId;
 }
 
+export interface DecideBudgetCommand {
+  readonly approvalId?: EntityId;
+  readonly organizationId: OrganizationId;
+  readonly subjectId: EntityId;
+  readonly decidedBy: UserId;
+  readonly decision: "approved" | "rejected";
+  readonly notes?: string;
+}
+
 export async function requestApproval(
   command: RequestApprovalCommand,
   context: OperationalContext,
@@ -37,7 +46,13 @@ export async function requestApproval(
   await bus.publish(
     createEvent(
       "workflow.approval_requested",
-      { approvalId: approval.id, organizationId: approval.organizationId, subjectId: approval.subjectId },
+      {
+        approvalId: approval.id,
+        organizationId: approval.organizationId,
+        subjectId: approval.subjectId,
+        title: "Aprovacao solicitada",
+        kind: "approval"
+      },
       context,
       {
         organizationId: approval.organizationId,
@@ -47,5 +62,44 @@ export async function requestApproval(
       }
     )
   );
+  return approval;
+}
+
+export async function decideBudget(
+  command: DecideBudgetCommand,
+  context: OperationalContext,
+  bus: EventBus
+): Promise<ApprovalRequest> {
+  const approval: ApprovalRequest = {
+    id: command.approvalId ?? createId("apv"),
+    organizationId: command.organizationId,
+    subjectId: command.subjectId,
+    state: command.decision,
+    requestedBy: command.decidedBy,
+    requestedAt: systemClock.now()
+  };
+
+  await bus.publish(
+    createEvent(
+      command.decision === "approved" ? "BudgetApproved" : "BudgetRejected",
+      {
+        approvalId: approval.id,
+        organizationId: command.organizationId,
+        subjectId: command.subjectId,
+        title: command.decision === "approved" ? "Orcamento aprovado" : "Orcamento reprovado",
+        body: command.notes,
+        kind: "approval",
+        metadata: { decision: command.decision }
+      },
+      context,
+      {
+        organizationId: command.organizationId,
+        subjectId: command.subjectId,
+        actorId: command.decidedBy,
+        sourceModule: "workflow"
+      }
+    )
+  );
+
   return approval;
 }

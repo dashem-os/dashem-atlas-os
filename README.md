@@ -59,6 +59,7 @@ Useful endpoints:
 - `POST /ai/suggestions`
 - `POST /workflow/approvals`
 - `GET /observability`
+- `GET /dashboard?organizationId=org_demo`
 
 Demo body:
 
@@ -69,3 +70,31 @@ Demo body:
   "actorId": "usr_demo"
 }
 ```
+
+## Sprint 1: Operational Work Orders
+
+Sprint 1 turns the foundation into the first usable operational workflow:
+
+- Asset CRUD: `POST /assets`, `GET /assets`, `GET/PATCH/DELETE /assets/:id?organizationId=...`
+- Work orders: `POST /maintenance/work-orders`, `GET /maintenance/work-orders`, `GET /maintenance/work-orders/:id`
+- Status: `PATCH /maintenance/work-orders/:id/status`
+- Evidence: `POST /maintenance/work-orders/:id/evidence`
+- Checklist: `PATCH /maintenance/work-orders/:id/checklist/:itemId`
+- Timeline comments: `POST /maintenance/work-orders/:id/comments`
+- AI suggestion linked to OS: `POST /ai/suggestions`
+- Budget submission: `POST /maintenance/work-orders/:id/budget`
+- Budget approval/rejection: `POST /workflow/approvals`
+- Dashboard by organization: `GET /dashboard?organizationId=...`
+
+Golden rule: no important action happens outside the timeline. The operational event stream now includes:
+
+- `AssetCreated`
+- `WorkOrderOpened`
+- `EvidenceAttached`
+- `AiSuggestionCreated`
+- `BudgetSubmitted`
+- `BudgetApproved`
+- `BudgetRejected`
+- `WorkOrderClosed`
+
+Additional operational events such as `AssetUpdated`, `ChecklistItemUpdated`, `CommentAdded`, and `WorkOrderStatusChanged` also project into the same timeline.

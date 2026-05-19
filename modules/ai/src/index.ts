@@ -1,6 +1,6 @@
 import type { EventBus } from "@atlas/core-events";
 import { createEvent } from "@atlas/core-events";
-import type { OperationalContext, OrganizationId } from "@atlas/core-shared";
+import type { EntityId, OperationalContext, OrganizationId } from "@atlas/core-shared";
 import { createId, systemClock } from "@atlas/core-shared";
 
 export type AiTaskKind = "summarize" | "classify" | "recommend" | "extract";
@@ -15,6 +15,7 @@ export interface AiTask {
 
 export interface RequestAiTaskCommand {
   readonly organizationId: OrganizationId;
+  readonly subjectId?: EntityId;
   readonly kind: AiTaskKind;
   readonly input: string;
 }
@@ -30,10 +31,19 @@ export async function requestAiTask(command: RequestAiTaskCommand, context: Oper
 
   await bus.publish(
     createEvent(
-      "ai.task_requested",
-      { taskId: task.id, organizationId: task.organizationId, suggestion: command.input },
+      "AiSuggestionCreated",
+      {
+        taskId: task.id,
+        organizationId: task.organizationId,
+        subjectId: command.subjectId,
+        suggestion: command.input,
+        title: "IA sugeriu intervencao",
+        body: command.input,
+        kind: "ai_suggestion",
+        metadata: { aiTaskKind: command.kind }
+      },
       context,
-      { organizationId: task.organizationId, sourceModule: "ai" }
+      { organizationId: task.organizationId, sourceModule: "ai", ...(command.subjectId ? { subjectId: command.subjectId } : {}) }
     )
   );
   return task;

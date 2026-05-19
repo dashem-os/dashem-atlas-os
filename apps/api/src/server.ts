@@ -1,11 +1,19 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { InMemoryTenantRepository } from "@atlas/core-database";
-import { InMemoryEventBus } from "@atlas/core-events";
+import { createEvent, InMemoryEventBus } from "@atlas/core-events";
 import { Telemetry } from "@atlas/core-observability";
 import type { EntityId, OperationalContext, OrganizationId, UserId } from "@atlas/core-shared";
-import { registerAsset, type Asset } from "@atlas/module-assets";
+import { archiveAsset, assertAssetTenant, registerAsset, updateAsset, type Asset } from "@atlas/module-assets";
 import { registerUser } from "@atlas/module-auth";
-import { createWorkOrder, type WorkOrder } from "@atlas/module-maintenance";
+import {
+  assertWorkOrderTenant,
+  attachEvidence,
+  changeWorkOrderStatus,
+  createWorkOrder,
+  submitBudget,
+  updateChecklistItem,
+  type WorkOrder
+} from "@atlas/module-maintenance";
 import { createOrganization } from "@atlas/module-organizations";
 import {
   addTimelineEntry,
@@ -16,7 +24,7 @@ import {
   type AddTimelineEntryCommand
 } from "@atlas/module-timeline";
 import { requestAiTask } from "@atlas/module-ai";
-import { requestApproval } from "@atlas/module-workflow";
+import { decideBudget, requestApproval } from "@atlas/module-workflow";
 
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
 const environment = process.env.ATLAS_ENV === "production" ? "production" : "development";
@@ -84,6 +92,18 @@ function notFound(response: ServerResponse): void {
   send(response, 404, { error: "not_found", message: "Route not found." });
 }
 
+function organizationFrom(url: URL, request: IncomingMessage): OrganizationId | null {
+  return (url.searchParams.get("organizationId") ?? request.headers["x-organization-id"]?.toString() ?? null) as OrganizationId | null;
+}
+
+async function findAssetOrThrow(id: EntityId, organizationId: OrganizationId): Promise<Asset> {
+  return assertAssetTenant(await assets.findById(id), organizationId, id);
+}
+
+async function findWorkOrderOrThrow(id: EntityId, organizationId: OrganizationId): Promise<WorkOrder> {
+  return assertWorkOrderTenant(await workOrders.findById(id), organizationId, id);
+}
+
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -143,11 +163,155 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    const assetMatch = url.pathname.match(/^\/assets\/([^/]+)$/);
+    if (assetMatch) {
+      const assetId = assetMatch[1] as EntityId;
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      if (request.method === "GET") {
+        send(response, 200, { asset: await findAssetOrThrow(assetId, organizationId) });
+        return;
+      }
+
+      if (request.method === "PATCH") {
+        const payload = await readJson<Parameters<typeof updateAsset>[1]>(request);
+        const asset = await findAssetOrThrow(assetId, organizationId);
+        const updated = await updateAsset(asset, payload, context(request, organizationId), bus);
+        await assets.save(updated);
+        send(response, 200, { asset: updated });
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        const asset = await findAssetOrThrow(assetId, organizationId);
+        const archived = await archiveAsset(asset, context(request, organizationId), bus);
+        await assets.save(archived);
+        send(response, 200, { asset: archived });
+        return;
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/maintenance/work-orders") {
       const payload = await readJson<Parameters<typeof createWorkOrder>[0]>(request);
       const workOrder = await createWorkOrder(payload, context(request, payload.organizationId), bus);
       await workOrders.save(workOrder);
       send(response, 201, { workOrder, timeline: await timeline.list({ organizationId: workOrder.organizationId, subjectId: workOrder.id }) });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/maintenance/work-orders") {
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      send(response, 200, await workOrders.listByOrganization(organizationId));
+      return;
+    }
+
+    const workOrderMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)$/);
+    if (workOrderMatch) {
+      const workOrderId = workOrderMatch[1] as EntityId;
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      if (request.method === "GET") {
+        const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+        send(response, 200, {
+          workOrder,
+          timeline: await timeline.list({ organizationId, subjectId: workOrder.id })
+        });
+        return;
+      }
+    }
+
+    const statusMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/status$/);
+    if (request.method === "PATCH" && statusMatch) {
+      const payload = await readJson<{ organizationId: OrganizationId; state: WorkOrder["state"]; reason?: string }>(request);
+      const workOrderId = statusMatch[1] as EntityId;
+      const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      const updated = await changeWorkOrderStatus(workOrder, payload, context(request, payload.organizationId), bus);
+      await workOrders.save(updated);
+      send(response, 200, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
+      return;
+    }
+
+    const evidenceMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/evidence$/);
+    if (request.method === "POST" && evidenceMatch) {
+      const payload = await readJson<Parameters<typeof attachEvidence>[1] & { organizationId: OrganizationId }>(request);
+      const workOrderId = evidenceMatch[1] as EntityId;
+      const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      const updated = await attachEvidence(workOrder, payload, context(request, payload.organizationId), bus);
+      await workOrders.save(updated);
+      send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
+      return;
+    }
+
+    const checklistMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/checklist\/([^/]+)$/);
+    if (request.method === "PATCH" && checklistMatch) {
+      const payload = await readJson<{ organizationId: OrganizationId; state: "open" | "done" | "blocked"; actorId?: UserId }>(request);
+      const workOrderId = checklistMatch[1] as EntityId;
+      const itemId = checklistMatch[2] as EntityId;
+      const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      const updated = await updateChecklistItem(
+        workOrder,
+        { itemId, state: payload.state, ...(payload.actorId ? { actorId: payload.actorId } : {}) },
+        context(request, payload.organizationId),
+        bus
+      );
+      await workOrders.save(updated);
+      send(response, 200, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
+      return;
+    }
+
+    const commentsMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/comments$/);
+    if (request.method === "POST" && commentsMatch) {
+      const payload = await readJson<{ organizationId: OrganizationId; actorId?: UserId; comment: string }>(request);
+      const workOrderId = commentsMatch[1] as EntityId;
+      await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      await bus.publish(
+        createEvent(
+          "CommentAdded",
+          {
+            workOrderId,
+            organizationId: payload.organizationId,
+            subjectId: workOrderId,
+            title: "Comentario adicionado",
+            body: payload.comment,
+            kind: "comment"
+          },
+          context(request, payload.organizationId),
+          {
+            organizationId: payload.organizationId,
+            subjectId: workOrderId,
+            sourceModule: "timeline",
+            ...(payload.actorId ? { actorId: payload.actorId } : {})
+          }
+        )
+      );
+      send(response, 201, { timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+      return;
+    }
+
+    const budgetMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/budget$/);
+    if (request.method === "POST" && budgetMatch) {
+      const payload = await readJson<Parameters<typeof submitBudget>[1] & { organizationId: OrganizationId }>(request);
+      const workOrderId = budgetMatch[1] as EntityId;
+      const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      const updated = await submitBudget(workOrder, payload, context(request, payload.organizationId), bus);
+      await workOrders.save(updated);
+      send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
 
@@ -191,72 +355,103 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && photoMatch) {
       const payload = await readJson<{ organizationId: OrganizationId; actorId?: UserId; fileName: string; url?: string }>(request);
       const subjectId = photoMatch[1] as EntityId;
-      const entry = await addTimelineEntry(
+      const workOrder = await findWorkOrderOrThrow(subjectId, payload.organizationId);
+      const updated = await attachEvidence(
+        workOrder,
         {
-          organizationId: payload.organizationId,
-          subjectId,
-          sourceModule: "maintenance",
-          kind: "attachment",
           title: attachPhotoTitle(payload.fileName),
-          metadata: { fileName: payload.fileName, url: payload.url },
+          kind: "photo",
           ...(payload.actorId ? { actorId: payload.actorId } : {}),
-          ...(payload.url ? { body: payload.url } : {})
+          ...(payload.url ? { url: payload.url } : {})
         },
         context(request, payload.organizationId),
-        bus,
-        timeline
+        bus
       );
-      send(response, 201, { entry });
+      await workOrders.save(updated);
+      send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/ai/suggestions") {
       const payload = await readJson<{ organizationId: OrganizationId; subjectId: EntityId; suggestion: string }>(request);
+      await findWorkOrderOrThrow(payload.subjectId, payload.organizationId);
       const task = await requestAiTask(
-        { organizationId: payload.organizationId, kind: "recommend", input: payload.suggestion },
+        { organizationId: payload.organizationId, subjectId: payload.subjectId, kind: "recommend", input: payload.suggestion },
         context(request, payload.organizationId),
         bus
       );
-      const entry = await addTimelineEntry(
-        {
-          organizationId: payload.organizationId,
-          subjectId: payload.subjectId,
-          sourceModule: "ai",
-          kind: "ai_suggestion",
-          title: "IA sugeriu intervencao",
-          body: payload.suggestion,
-          metadata: { taskId: task.id }
-        },
-        context(request, payload.organizationId),
-        bus,
-        timeline
-      );
-      send(response, 201, { task, entry });
+      send(response, 201, { task, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: payload.subjectId }) });
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/workflow/approvals") {
       const payload = await readJson<{ organizationId: OrganizationId; subjectId: EntityId; requestedBy: UserId; decision?: "approved" | "rejected" }>(request);
-      const approval = await requestApproval(
-        { organizationId: payload.organizationId, subjectId: payload.subjectId, requestedBy: payload.requestedBy },
-        context(request, payload.organizationId),
-        bus
-      );
-      const entry = await addTimelineEntry(
-        {
-          organizationId: payload.organizationId,
-          subjectId: payload.subjectId,
-          actorId: payload.requestedBy,
-          sourceModule: "workflow",
-          kind: "approval",
-          title: payload.decision === "rejected" ? "Gestor recusou orcamento" : "Gestor aprovou orcamento",
-          metadata: { approvalId: approval.id, decision: payload.decision ?? "approved" }
+      const workOrder = await findWorkOrderOrThrow(payload.subjectId, payload.organizationId);
+      const approval =
+        payload.decision
+          ? await decideBudget(
+              {
+                organizationId: payload.organizationId,
+                subjectId: payload.subjectId,
+                decidedBy: payload.requestedBy,
+                decision: payload.decision
+              },
+              context(request, payload.organizationId),
+              bus
+            )
+          : await requestApproval(
+              { organizationId: payload.organizationId, subjectId: payload.subjectId, requestedBy: payload.requestedBy },
+              context(request, payload.organizationId),
+              bus
+            );
+      const updated =
+        payload.decision === "approved"
+          ? await changeWorkOrderStatus(workOrder, { state: "approved" }, context(request, payload.organizationId), bus)
+          : payload.decision === "rejected"
+            ? await changeWorkOrderStatus(workOrder, { state: "rejected" }, context(request, payload.organizationId), bus)
+            : workOrder;
+
+      await workOrders.save(updated);
+      send(response, 201, {
+        approval,
+        workOrder: updated,
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: payload.subjectId })
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/dashboard") {
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      const organizationAssets = (await assets.listByOrganization(organizationId, { limit: 500 })).items;
+      const organizationWorkOrders = (await workOrders.listByOrganization(organizationId, { limit: 500 })).items;
+      const timelineItems = await timeline.list({ organizationId, limit: 10 });
+      const workOrdersByState = organizationWorkOrders.reduce<Record<string, number>>((acc, item) => {
+        acc[item.state] = (acc[item.state] ?? 0) + 1;
+        return acc;
+      }, {});
+      const assetsByCriticality = organizationAssets.reduce<Record<string, number>>((acc, item) => {
+        acc[item.criticality] = (acc[item.criticality] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      send(response, 200, {
+        organizationId,
+        totals: {
+          assets: organizationAssets.length,
+          activeAssets: organizationAssets.filter((asset) => asset.status === "active").length,
+          workOrders: organizationWorkOrders.length,
+          openWorkOrders: organizationWorkOrders.filter((workOrder) => workOrder.status === "active").length
         },
-        context(request, payload.organizationId),
-        bus,
-        timeline
-      );
-      send(response, 201, { approval, entry });
+        workOrdersByState,
+        assetsByCriticality,
+        recentTimeline: timelineItems
+      });
       return;
     }
 

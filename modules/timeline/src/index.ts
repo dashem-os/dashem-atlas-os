@@ -226,6 +226,12 @@ export function createBootstrapTimeline(
 }
 
 function inferKind(event: DomainEvent): TimelineEntryKind {
+  const payload = event.payload as { kind?: TimelineEntryKind };
+
+  if (payload.kind) {
+    return payload.kind;
+  }
+
   if (event.name.includes("photo") || event.name.includes("attachment")) {
     return "attachment";
   }
@@ -242,19 +248,39 @@ function inferKind(event: DomainEvent): TimelineEntryKind {
 }
 
 function inferTitle(event: DomainEvent): string {
+  const payload = event.payload as { title?: string };
+
+  if (payload.title) {
+    return payload.title;
+  }
+
   const titles: Record<string, string> = {
-    "asset.registered": "Ativo registrado",
-    "maintenance.work_order_created": "Tecnico abriu OS",
+    AssetCreated: "Ativo criado",
+    AssetUpdated: "Ativo atualizado",
+    AssetArchived: "Ativo arquivado",
+    WorkOrderOpened: "OS aberta",
+    WorkOrderStatusChanged: "Status da OS alterado",
+    EvidenceAttached: "Evidencia anexada",
+    ChecklistItemUpdated: "Checklist atualizado",
+    CommentAdded: "Comentario adicionado",
+    AiSuggestionCreated: "IA sugeriu intervencao",
+    BudgetSubmitted: "Orcamento enviado",
+    BudgetApproved: "Orcamento aprovado",
+    BudgetRejected: "Orcamento reprovado",
+    WorkOrderClosed: "OS encerrada",
     "construction.project_created": "Obra criada",
-    "workflow.approval_requested": "Aprovacao solicitada",
-    "ai.task_requested": "IA gerou sugestao"
+    "workflow.approval_requested": "Aprovacao solicitada"
   };
 
   return titles[event.name] ?? event.name;
 }
 
-function inferBody(event: DomainEvent, payload: { suggestion?: string }): string | undefined {
-  if (event.name === "ai.task_requested") {
+function inferBody(event: DomainEvent, payload: { suggestion?: string; body?: string }): string | undefined {
+  if (payload.body) {
+    return payload.body;
+  }
+
+  if (event.name === "AiSuggestionCreated") {
     return payload.suggestion;
   }
 
