@@ -1,0 +1,13 @@
+{
+  "name": "@atlas/module-notifications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": { "build": "tsc -b", "dev": "tsc -b --watch" },
+  "dependencies": {
+    "@atlas/core-events": "0.1.0",
+    "@atlas/core-shared": "0.1.0"
+  }
+}

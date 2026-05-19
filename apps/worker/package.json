@@ -1,0 +1,18 @@
+{
+  "name": "@atlas/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/worker.js",
+  "types": "dist/worker.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "npm run build && node dist/worker.js",
+    "start": "node dist/worker.js"
+  },
+  "dependencies": {
+    "@atlas/core-events": "0.1.0",
+    "@atlas/core-shared": "0.1.0",
+    "@atlas/module-timeline": "0.1.0"
+  }
+}

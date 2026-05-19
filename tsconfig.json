@@ -1,0 +1,22 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./core/shared" },
+    { "path": "./core/events" },
+    { "path": "./core/database" },
+    { "path": "./core/security" },
+    { "path": "./core/observability" },
+    { "path": "./modules/auth" },
+    { "path": "./modules/organizations" },
+    { "path": "./modules/assets" },
+    { "path": "./modules/maintenance" },
+    { "path": "./modules/construction" },
+    { "path": "./modules/workflow" },
+    { "path": "./modules/timeline" },
+    { "path": "./modules/ai" },
+    { "path": "./modules/notifications" },
+    { "path": "./apps/api" },
+    { "path": "./apps/worker" },
+    { "path": "./apps/web" }
+  ]
+}

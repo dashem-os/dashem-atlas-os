@@ -1,0 +1,26 @@
+{
+  "name": "@atlas/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "npm run build && node dist/server.js",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@atlas/core-database": "0.1.0",
+    "@atlas/core-events": "0.1.0",
+    "@atlas/core-observability": "0.1.0",
+    "@atlas/core-shared": "0.1.0",
+    "@atlas/module-ai": "0.1.0",
+    "@atlas/module-assets": "0.1.0",
+    "@atlas/module-auth": "0.1.0",
+    "@atlas/module-maintenance": "0.1.0",
+    "@atlas/module-organizations": "0.1.0",
+    "@atlas/module-timeline": "0.1.0",
+    "@atlas/module-workflow": "0.1.0"
+  }
+}

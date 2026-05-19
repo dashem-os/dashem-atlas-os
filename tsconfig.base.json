@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@atlas/core-shared": ["core/shared/src/index.ts"],
+      "@atlas/core-events": ["core/events/src/index.ts"],
+      "@atlas/core-database": ["core/database/src/index.ts"],
+      "@atlas/core-security": ["core/security/src/index.ts"],
+      "@atlas/core-observability": ["core/observability/src/index.ts"],
+      "@atlas/module-auth": ["modules/auth/src/index.ts"],
+      "@atlas/module-organizations": ["modules/organizations/src/index.ts"],
+      "@atlas/module-assets": ["modules/assets/src/index.ts"],
+      "@atlas/module-maintenance": ["modules/maintenance/src/index.ts"],
+      "@atlas/module-construction": ["modules/construction/src/index.ts"],
+      "@atlas/module-workflow": ["modules/workflow/src/index.ts"],
+      "@atlas/module-timeline": ["modules/timeline/src/index.ts"],
+      "@atlas/module-ai": ["modules/ai/src/index.ts"],
+      "@atlas/module-notifications": ["modules/notifications/src/index.ts"]
+    },
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
+}

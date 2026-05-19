@@ -1,0 +1,30 @@
+{
+  "name": "dashem-atlas-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Operational foundation for Atlas OS.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "core/*",
+    "modules/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "dev:api": "npm run dev -w @atlas/api",
+    "dev:worker": "npm run dev -w @atlas/worker",
+    "dev:web": "npm run dev -w @atlas/web",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "typecheck": "tsc -b --pretty"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
