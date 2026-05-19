@@ -78,12 +78,12 @@ const html = String.raw`<!doctype html>
     <main>
       <nav>
         <h1>Atlas OS</h1>
-        <p>Sprint 3: evidencias operacionais, OCR simples e relatorios tecnicos versionados.</p>
+        <p>Sprint 4: consciencia operacional, health score, feed vivo e alertas por timeline.</p>
       </nav>
       <section>
         <header>
           <div>
-            <h2>Evidence & Reports</h2>
+            <h2>Operational Awareness</h2>
             <p>Nada importante acontece fora da timeline.</p>
           </div>
           <div class="status">
@@ -117,6 +117,9 @@ const html = String.raw`<!doctype html>
               <button class="secondary" id="ai-report">Relatorio</button>
               <button class="secondary" id="report-version">Versao relatorio</button>
               <button class="secondary" id="report-approve">Aprovar relatorio</button>
+              <button class="secondary" id="monitoring-feed">Feed vivo</button>
+              <button class="secondary" id="monitoring-alerts">Alertas</button>
+              <button class="secondary" id="monitoring-health">Health</button>
               <button class="secondary" id="budget">Aprovar orcamento</button>
               <button class="secondary" id="close">Fechar OS</button>
             </div>
@@ -249,6 +252,10 @@ const html = String.raw`<!doctype html>
         });
         await refresh();
       });
+
+      document.querySelector("#monitoring-feed").addEventListener("click", () => call("/monitoring/feed?organizationId=" + encodeURIComponent(val("#org")) + "&subjectId=" + encodeURIComponent(val("#wo"))));
+      document.querySelector("#monitoring-alerts").addEventListener("click", () => call("/monitoring/alerts?organizationId=" + encodeURIComponent(val("#org")) + "&subjectId=" + encodeURIComponent(val("#wo"))));
+      document.querySelector("#monitoring-health").addEventListener("click", () => call("/monitoring/health?organizationId=" + encodeURIComponent(val("#org")) + "&subjectId=" + encodeURIComponent(val("#wo"))));
 
       document.querySelector("#budget").addEventListener("click", async () => {
         await call("/maintenance/work-orders/" + encodeURIComponent(val("#wo")) + "/budget", { method: "POST", body: JSON.stringify({ organizationId: val("#org"), amount: 2480, currency: "BRL", notes: "Troca preventiva aprovada para evitar parada." }) });

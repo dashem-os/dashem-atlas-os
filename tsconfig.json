@@ -14,6 +14,7 @@
     { "path": "./modules/workflow" },
     { "path": "./modules/timeline" },
     { "path": "./modules/ai" },
+    { "path": "./modules/monitoring" },
     { "path": "./modules/notifications" },
     { "path": "./modules/reports" },
     { "path": "./apps/api" },

@@ -11,7 +11,8 @@ export type EventOriginModule =
   | "timeline"
   | "ai"
   | "notifications"
-  | "reports";
+  | "reports"
+  | "monitoring";
 
 export interface EventMetadata {
   readonly organizationId?: OrganizationId;

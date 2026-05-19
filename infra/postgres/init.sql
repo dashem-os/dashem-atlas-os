@@ -144,3 +144,32 @@ create table if not exists technical_report_versions (
 
 create index if not exists technical_report_versions_work_order_idx
   on technical_report_versions (organization_id, work_order_id, version desc);
+
+create table if not exists operational_alerts (
+  id text primary key,
+  organization_id text not null references organizations(id),
+  subject_id text not null,
+  event_name text not null,
+  severity text not null,
+  title text not null,
+  body text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  detected_at timestamptz not null default now()
+);
+
+create table if not exists health_scores (
+  id text primary key,
+  organization_id text not null references organizations(id),
+  subject_id text not null,
+  subject_type text not null,
+  score integer not null,
+  grade text not null,
+  reasons text[] not null default array[]::text[],
+  recalculated_at timestamptz not null default now()
+);
+
+create index if not exists operational_alerts_org_idx
+  on operational_alerts (organization_id, detected_at desc);
+
+create index if not exists health_scores_subject_idx
+  on health_scores (organization_id, subject_type, subject_id);

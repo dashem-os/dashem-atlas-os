@@ -40,6 +40,12 @@ import {
   decideReportVersion,
   type TechnicalReportVersion
 } from "@atlas/module-reports";
+import {
+  evaluateOperationalAwareness,
+  shouldMonitorEvent,
+  type HealthScore,
+  type OperationalAlert
+} from "@atlas/module-monitoring";
 
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
 const environment = process.env.ATLAS_ENV === "production" ? "production" : "development";
@@ -50,11 +56,59 @@ const timeline = new InMemoryTimelineRepository();
 const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
 const reports = new Map<string, TechnicalReportVersion[]>();
+const operationalFeed: unknown[] = [];
+const operationalAlerts: OperationalAlert[] = [];
+const healthScores = new Map<string, HealthScore>();
 
 bindTimelineProjection(bus, timeline);
 bus.subscribeAll((event) => {
   telemetry.increment("events.published");
   telemetry.increment(`events.${event.name}`);
+  operationalFeed.unshift(event);
+  operationalFeed.splice(200);
+});
+
+bus.subscribeAll(async (event) => {
+  if (!shouldMonitorEvent(event)) {
+    return;
+  }
+
+  const organizationId = event.metadata.organizationId;
+  const subjectId = event.metadata.subjectId;
+
+  if (!organizationId || !subjectId) {
+    return;
+  }
+
+  const workOrder = await workOrders.findById(subjectId);
+  const subjectType = workOrder ? "work_order" : event.metadata.sourceModule === "assets" ? "asset" : "work_order";
+  const entries = await timeline.list({ organizationId, subjectId, limit: 100 });
+  const result = await evaluateOperationalAwareness(
+    {
+      organizationId,
+      subjectId,
+      subjectType,
+      timeline: entries,
+      ...(workOrder?.assetId ? { assetId: workOrder.assetId } : {})
+    },
+    event.context,
+    bus
+  );
+
+  for (const score of result.healthScores) {
+    healthScores.set(`${score.organizationId}:${score.subjectType}:${score.subjectId}`, score);
+  }
+
+  for (const alert of result.alerts) {
+    const exists = operationalAlerts.some(
+      (item) => item.organizationId === alert.organizationId && item.subjectId === alert.subjectId && item.eventName === alert.eventName
+    );
+
+    if (!exists) {
+      operationalAlerts.unshift(alert);
+      operationalAlerts.splice(200);
+    }
+  }
 });
 
 const modules = [
@@ -66,7 +120,8 @@ const modules = [
   "workflow",
   "timeline",
   "ai",
-  "notifications"
+  "notifications",
+  "monitoring"
 ] as const;
 
 function context(request: IncomingMessage, organizationId?: OrganizationId): OperationalContext {
@@ -184,6 +239,43 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/events") {
       send(response, 200, { events: bus.published });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/monitoring/feed") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+      const events = operationalFeed
+        .filter((item) => {
+          const event = item as { metadata?: { organizationId?: OrganizationId; subjectId?: EntityId } };
+          return organizationId ? event.metadata?.organizationId === organizationId : true;
+        })
+        .filter((item) => {
+          const event = item as { metadata?: { subjectId?: EntityId } };
+          return subjectId ? event.metadata?.subjectId === subjectId : true;
+        })
+        .slice(0, Number(url.searchParams.get("limit") ?? 50));
+      send(response, 200, { items: events });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/monitoring/alerts") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+      const items = operationalAlerts
+        .filter((alert) => (organizationId ? alert.organizationId === organizationId : true))
+        .filter((alert) => (subjectId ? alert.subjectId === subjectId : true));
+      send(response, 200, { items });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/monitoring/health") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+      const items = [...healthScores.values()]
+        .filter((score) => (organizationId ? score.organizationId === organizationId : true))
+        .filter((score) => (subjectId ? score.subjectId === subjectId : true));
+      send(response, 200, { items });
       return;
     }
 

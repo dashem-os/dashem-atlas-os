@@ -19,6 +19,7 @@
     "@atlas/module-assets": "0.1.0",
     "@atlas/module-auth": "0.1.0",
     "@atlas/module-maintenance": "0.1.0",
+    "@atlas/module-monitoring": "0.1.0",
     "@atlas/module-organizations": "0.1.0",
     "@atlas/module-reports": "0.1.0",
     "@atlas/module-timeline": "0.1.0",

@@ -174,3 +174,29 @@ Rules enforced in the current runtime:
 - Report versions are generated from timeline entries.
 - Approved report versions cannot be changed by a later decision.
 - Report and evidence changes are published as events and projected into the timeline.
+
+## Sprint 4: Operational Awareness & Monitoring
+
+Sprint 4 adds continuous operational perception on top of timeline, workflow, evidence, and behavior.
+
+Monitoring endpoints:
+
+- `GET /monitoring/feed?organizationId=...`
+- `GET /monitoring/alerts?organizationId=...`
+- `GET /monitoring/health?organizationId=...`
+
+Monitoring events:
+
+- `OperationalRiskDetected`
+- `SlaViolationPredicted`
+- `RecurringFailureDetected`
+- `MissingEvidenceDetected`
+- `DelayedWorkOrderDetected`
+- `HealthScoreRecalculated`
+
+Rules:
+
+- Every detection is derived from timeline state.
+- Every operational perception is published as an event and appears in the timeline.
+- The monitoring/AI layer can detect and suggest, but never executes mitigation automatically.
+- Health scores are recalculated after relevant events.
