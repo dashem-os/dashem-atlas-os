@@ -12,6 +12,7 @@ import {
   createWorkOrder,
   submitBudget,
   updateChecklistItem,
+  uploadEvidence,
   type WorkOrder
 } from "@atlas/module-maintenance";
 import { createOrganization } from "@atlas/module-organizations";
@@ -34,6 +35,11 @@ import {
   type AiWorkOrderMemory
 } from "@atlas/module-ai";
 import { decideBudget, requestApproval } from "@atlas/module-workflow";
+import {
+  createReportVersion,
+  decideReportVersion,
+  type TechnicalReportVersion
+} from "@atlas/module-reports";
 
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
 const environment = process.env.ATLAS_ENV === "production" ? "production" : "development";
@@ -43,6 +49,7 @@ const telemetry = new Telemetry();
 const timeline = new InMemoryTimelineRepository();
 const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
+const reports = new Map<string, TechnicalReportVersion[]>();
 
 bindTimelineProjection(bus, timeline);
 bus.subscribeAll((event) => {
@@ -133,6 +140,21 @@ async function buildAiMemory(workOrderId: EntityId, organizationId: Organization
       ...(entry.body ? { body: entry.body } : {})
     }))
   };
+}
+
+function reportKey(organizationId: OrganizationId, workOrderId: EntityId): string {
+  return `${organizationId}:${workOrderId}`;
+}
+
+function reportVersions(organizationId: OrganizationId, workOrderId: EntityId): TechnicalReportVersion[] {
+  return reports.get(reportKey(organizationId, workOrderId)) ?? [];
+}
+
+function saveReportVersion(report: TechnicalReportVersion): void {
+  const key = reportKey(report.organizationId, report.workOrderId);
+  const current = reports.get(key) ?? [];
+  const next = current.filter((item) => item.id !== report.id).concat(report);
+  reports.set(key, next.sort((a, b) => b.version - a.version));
 }
 
 const server = createServer(async (request, response) => {
@@ -279,6 +301,20 @@ const server = createServer(async (request, response) => {
     }
 
     const evidenceMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/evidence$/);
+    if (request.method === "GET" && evidenceMatch) {
+      const organizationId = organizationFrom(url, request);
+      const workOrderId = evidenceMatch[1] as EntityId;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+      send(response, 200, { items: workOrder.evidence });
+      return;
+    }
+
     if (request.method === "POST" && evidenceMatch) {
       const payload = await readJson<Parameters<typeof attachEvidence>[1] & { organizationId: OrganizationId }>(request);
       const workOrderId = evidenceMatch[1] as EntityId;
@@ -286,6 +322,21 @@ const server = createServer(async (request, response) => {
       const updated = await attachEvidence(workOrder, payload, context(request, payload.organizationId), bus);
       await workOrders.save(updated);
       send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
+      return;
+    }
+
+    const evidenceUploadMatch = url.pathname.match(/^\/maintenance\/work-orders\/([^/]+)\/evidence\/upload$/);
+    if (request.method === "POST" && evidenceUploadMatch) {
+      const payload = await readJson<Parameters<typeof uploadEvidence>[1] & { organizationId: OrganizationId }>(request);
+      const workOrderId = evidenceUploadMatch[1] as EntityId;
+      const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
+      const updated = await uploadEvidence(workOrder, payload, context(request, payload.organizationId), bus);
+      await workOrders.save(updated);
+      send(response, 201, {
+        evidence: updated.evidence[updated.evidence.length - 1],
+        gallery: updated.evidence,
+        timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id })
+      });
       return;
     }
 
@@ -456,6 +507,90 @@ const server = createServer(async (request, response) => {
       if (action === "report") {
         const report = await generateTechnicalReport(memory, ctx, bus);
         send(response, 201, { report, timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }) });
+        return;
+      }
+    }
+
+    const reportCollectionMatch = url.pathname.match(/^\/reports\/work-orders\/([^/]+)$/);
+    if (reportCollectionMatch) {
+      const workOrderId = reportCollectionMatch[1] as EntityId;
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      if (request.method === "GET") {
+        await findWorkOrderOrThrow(workOrderId, organizationId);
+        send(response, 200, { items: reportVersions(organizationId, workOrderId) });
+        return;
+      }
+
+      if (request.method === "POST") {
+        const payload = await readJson<{ createdBy?: UserId }>(request);
+        const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+        const entries = await timeline.list({ organizationId, subjectId: workOrderId, limit: 500 });
+        const version = reportVersions(organizationId, workOrderId).length + 1;
+        const report = await createReportVersion(
+          {
+            organizationId,
+            workOrderId,
+            workOrderTitle: workOrder.title,
+            timeline: entries.map((entry) => ({
+              occurredAt: entry.occurredAt,
+              title: entry.title,
+              eventName: entry.eventName,
+              sourceModule: entry.sourceModule,
+              ...(entry.body ? { body: entry.body } : {})
+            })),
+            version,
+            ...(payload.createdBy ? { createdBy: payload.createdBy } : {})
+          },
+          context(request, organizationId),
+          bus
+        );
+        saveReportVersion(report);
+        send(response, 201, { report, timeline: await timeline.list({ organizationId, subjectId: workOrderId }) });
+        return;
+      }
+    }
+
+    const reportItemMatch = url.pathname.match(/^\/reports\/work-orders\/([^/]+)\/versions\/([^/]+)(?:\/([^/]+))?$/);
+    if (reportItemMatch) {
+      const workOrderId = reportItemMatch[1] as EntityId;
+      const reportId = reportItemMatch[2] as EntityId;
+      const action = reportItemMatch[3];
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      const report = reportVersions(organizationId, workOrderId).find((item) => item.id === reportId);
+
+      if (!report) {
+        send(response, 404, { error: "report_not_found", message: "Report version not found." });
+        return;
+      }
+
+      if (request.method === "GET" && action === "html") {
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        response.end(report.html);
+        return;
+      }
+
+      if (request.method === "GET" && action === "pdf") {
+        send(response, 200, { reportId: report.id, pdfBase64: report.pdfBase64 });
+        return;
+      }
+
+      if (request.method === "POST" && action === "decision") {
+        const payload = await readJson<{ decidedBy: UserId; decision: "approved" | "rejected"; notes?: string }>(request);
+        const decided = await decideReportVersion(report, payload, context(request, organizationId), bus);
+        saveReportVersion(decided);
+        send(response, 200, { report: decided, timeline: await timeline.list({ organizationId, subjectId: workOrderId }) });
         return;
       }
     }

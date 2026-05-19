@@ -10,6 +10,7 @@
     { "path": "../../modules/organizations" },
     { "path": "../../modules/assets" },
     { "path": "../../modules/maintenance" },
+    { "path": "../../modules/reports" },
     { "path": "../../modules/timeline" },
     { "path": "../../modules/ai" },
     { "path": "../../modules/workflow" }

@@ -18,7 +18,8 @@
       "@atlas/module-workflow": ["modules/workflow/src/index.ts"],
       "@atlas/module-timeline": ["modules/timeline/src/index.ts"],
       "@atlas/module-ai": ["modules/ai/src/index.ts"],
-      "@atlas/module-notifications": ["modules/notifications/src/index.ts"]
+      "@atlas/module-notifications": ["modules/notifications/src/index.ts"],
+      "@atlas/module-reports": ["modules/reports/src/index.ts"]
     },
     "strict": true,
     "declaration": true,

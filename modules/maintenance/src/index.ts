@@ -19,10 +19,18 @@ export interface ChecklistItem {
 
 export interface Evidence {
   readonly id: EntityId;
+  readonly organizationId: OrganizationId;
+  readonly workOrderId: EntityId;
   readonly kind: EvidenceKind;
   readonly title: string;
+  readonly fileName?: string;
+  readonly mimeType?: string;
+  readonly sizeBytes?: number;
+  readonly contentBase64?: string;
   readonly url?: string;
   readonly notes?: string;
+  readonly metadata: Record<string, unknown>;
+  readonly ocrText?: string;
   readonly attachedAt: ISODateTime;
   readonly attachedBy?: UserId;
 }
@@ -69,6 +77,17 @@ export interface AttachEvidenceCommand {
   readonly title: string;
   readonly url?: string;
   readonly notes?: string;
+  readonly actorId?: UserId;
+}
+
+export interface UploadEvidenceCommand {
+  readonly kind: EvidenceKind;
+  readonly title: string;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly contentBase64: string;
+  readonly notes?: string;
+  readonly metadata?: Record<string, unknown>;
   readonly actorId?: UserId;
 }
 
@@ -172,9 +191,12 @@ export async function attachEvidence(
 ): Promise<WorkOrder> {
   const evidence: Evidence = {
     id: createId("evd"),
+    organizationId: workOrder.organizationId,
+    workOrderId: workOrder.id,
     kind: command.kind,
     title: command.title,
     attachedAt: systemClock.now(),
+    metadata: {},
     ...(command.url ? { url: command.url } : {}),
     ...(command.notes ? { notes: command.notes } : {}),
     ...(command.actorId ? { attachedBy: command.actorId } : {})
@@ -208,6 +230,92 @@ export async function attachEvidence(
       }
     )
   );
+
+  return updated;
+}
+
+export async function uploadEvidence(
+  workOrder: WorkOrder,
+  command: UploadEvidenceCommand,
+  context: OperationalContext,
+  bus: EventBus
+): Promise<WorkOrder> {
+  const ocrText = extractSimpleOcr(command.contentBase64, command.mimeType);
+  const evidence: Evidence = {
+    id: createId("evd"),
+    organizationId: workOrder.organizationId,
+    workOrderId: workOrder.id,
+    kind: command.kind,
+    title: command.title,
+    fileName: command.fileName,
+    mimeType: command.mimeType,
+    contentBase64: command.contentBase64,
+    sizeBytes: Buffer.from(command.contentBase64, "base64").byteLength,
+    attachedAt: systemClock.now(),
+    metadata: command.metadata ?? {},
+    ...(command.notes ? { notes: command.notes } : {}),
+    ...(ocrText ? { ocrText } : {}),
+    ...(command.actorId ? { attachedBy: command.actorId } : {})
+  };
+  const updated: WorkOrder = {
+    ...workOrder,
+    evidence: [...workOrder.evidence, evidence],
+    updatedAt: systemClock.now()
+  };
+
+  await bus.publish(
+    createEvent(
+      "EvidenceUploaded",
+      {
+        workOrderId: updated.id,
+        evidenceId: evidence.id,
+        organizationId: updated.organizationId,
+        subjectId: updated.id,
+        title: `Evidencia enviada: ${evidence.fileName}`,
+        body: evidence.notes ?? evidence.mimeType,
+        kind: "attachment",
+        metadata: {
+          evidenceKind: evidence.kind,
+          fileName: evidence.fileName,
+          mimeType: evidence.mimeType,
+          sizeBytes: evidence.sizeBytes,
+          ...evidence.metadata
+        }
+      },
+      context,
+      {
+        organizationId: updated.organizationId,
+        subjectId: updated.id,
+        sourceModule: "maintenance",
+        ...(command.actorId ? { actorId: command.actorId } : {})
+      }
+    )
+  );
+
+  if (ocrText) {
+    await bus.publish(
+      createEvent(
+        "EvidenceOcrExtracted",
+        {
+          workOrderId: updated.id,
+          evidenceId: evidence.id,
+          organizationId: updated.organizationId,
+          subjectId: updated.id,
+          title: "OCR extraido da evidencia",
+          body: ocrText,
+          kind: "system",
+          metadata: { fileName: evidence.fileName, textLength: ocrText.length }
+        },
+        context,
+        {
+          organizationId: updated.organizationId,
+          subjectId: updated.id,
+          sourceModule: "maintenance",
+          ...(command.actorId ? { actorId: command.actorId } : {})
+        }
+      )
+    );
+  }
 
   return updated;
 }
@@ -298,4 +406,19 @@ export function assertWorkOrderTenant(workOrder: WorkOrder | null, organizationI
   }
 
   return workOrder;
+}
+
+function extractSimpleOcr(contentBase64: string, mimeType: string): string | undefined {
+  const decoded = Buffer.from(contentBase64, "base64").toString("utf8");
+  const cleaned = decoded.replace(/[^\x09\x0A\x0D\x20-\x7EÀ-ÿ]/g, " ").replace(/\s+/g, " ").trim();
+
+  if (mimeType.startsWith("text/") || mimeType === "application/json") {
+    return cleaned.slice(0, 2000);
+  }
+
+  if (cleaned.length > 24) {
+    return cleaned.slice(0, 1000);
+  }
+
+  return undefined;
 }

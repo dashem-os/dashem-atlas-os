@@ -128,3 +128,49 @@ AI operational events:
 - `AiBudgetDrafted`
 - `AiTimelineSummarized`
 - `TechnicalReportGenerated`
+
+## Sprint 3: Operational Evidence & Reports
+
+Sprint 3 promotes evidence and technical reports into auditable operational records.
+
+Evidence endpoints:
+
+- `GET /maintenance/work-orders/:id/evidence?organizationId=...`
+- `POST /maintenance/work-orders/:id/evidence/upload`
+
+Upload body:
+
+```json
+{
+  "organizationId": "org_demo",
+  "kind": "document",
+  "title": "Laudo inicial",
+  "fileName": "laudo.txt",
+  "mimeType": "text/plain",
+  "contentBase64": "TGF1ZG8gZGUgdGVzdGU=",
+  "metadata": { "source": "field" }
+}
+```
+
+Report endpoints:
+
+- `GET /reports/work-orders/:id?organizationId=...`
+- `POST /reports/work-orders/:id?organizationId=...`
+- `GET /reports/work-orders/:id/versions/:reportId/html?organizationId=...`
+- `GET /reports/work-orders/:id/versions/:reportId/pdf?organizationId=...`
+- `POST /reports/work-orders/:id/versions/:reportId/decision?organizationId=...`
+
+Sprint 3 events:
+
+- `EvidenceUploaded`
+- `EvidenceOcrExtracted`
+- `ReportVersionCreated`
+- `ReportApproved`
+- `ReportRejected`
+
+Rules enforced in the current runtime:
+
+- Evidence is always scoped by `organizationId` and `workOrderId`.
+- Report versions are generated from timeline entries.
+- Approved report versions cannot be changed by a later decision.
+- Report and evidence changes are published as events and projected into the timeline.

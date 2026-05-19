@@ -10,7 +10,8 @@ export type EventOriginModule =
   | "workflow"
   | "timeline"
   | "ai"
-  | "notifications";
+  | "notifications"
+  | "reports";
 
 export interface EventMetadata {
   readonly organizationId?: OrganizationId;

@@ -78,12 +78,12 @@ const html = String.raw`<!doctype html>
     <main>
       <nav>
         <h1>Atlas OS</h1>
-        <p>Sprint 2: camada de inteligencia assistiva para OS, sempre registrada na timeline.</p>
+        <p>Sprint 3: evidencias operacionais, OCR simples e relatorios tecnicos versionados.</p>
       </nav>
       <section>
         <header>
           <div>
-            <h2>Intelligence Layer</h2>
+            <h2>Evidence & Reports</h2>
             <p>Nada importante acontece fora da timeline.</p>
           </div>
           <div class="status">
@@ -106,6 +106,7 @@ const html = String.raw`<!doctype html>
               <button id="asset-create">Criar ativo</button>
               <button id="wo-open">Abrir OS</button>
               <button class="secondary" id="evidence">Anexar evidencia</button>
+              <button class="secondary" id="evidence-upload">Upload OCR</button>
               <button class="secondary" id="comment-add">Comentar</button>
               <button class="secondary" id="ai">Sugerir IA</button>
               <button class="secondary" id="ai-diagnosis">Diagnostico</button>
@@ -114,6 +115,8 @@ const html = String.raw`<!doctype html>
               <button class="secondary" id="ai-budget">Orcamento IA</button>
               <button class="secondary" id="ai-summary">Resumo</button>
               <button class="secondary" id="ai-report">Relatorio</button>
+              <button class="secondary" id="report-version">Versao relatorio</button>
+              <button class="secondary" id="report-approve">Aprovar relatorio</button>
               <button class="secondary" id="budget">Aprovar orcamento</button>
               <button class="secondary" id="close">Fechar OS</button>
             </div>
@@ -191,6 +194,15 @@ const html = String.raw`<!doctype html>
         await refresh();
       });
 
+      document.querySelector("#evidence-upload").addEventListener("click", async () => {
+        const content = btoa(unescape(encodeURIComponent("Laudo: vibracao alta detectada. Recomenda-se inspecao tecnica.")));
+        await call("/maintenance/work-orders/" + encodeURIComponent(val("#wo")) + "/evidence/upload", {
+          method: "POST",
+          body: JSON.stringify({ organizationId: val("#org"), actorId: val("#actor"), kind: "document", title: "Laudo OCR", fileName: "laudo.txt", mimeType: "text/plain", contentBase64: content, metadata: { source: "web" } })
+        });
+        await refresh();
+      });
+
       document.querySelector("#comment-add").addEventListener("click", async () => {
         await call("/maintenance/work-orders/" + encodeURIComponent(val("#wo")) + "/comments", { method: "POST", body: JSON.stringify({ organizationId: val("#org"), actorId: val("#actor"), comment: val("#comment") }) });
         await refresh();
@@ -215,6 +227,28 @@ const html = String.raw`<!doctype html>
       document.querySelector("#ai-budget").addEventListener("click", () => aiAction("budget-draft"));
       document.querySelector("#ai-summary").addEventListener("click", () => aiAction("summary"));
       document.querySelector("#ai-report").addEventListener("click", () => aiAction("report"));
+
+      let lastReportId = "";
+      document.querySelector("#report-version").addEventListener("click", async () => {
+        const data = await call("/reports/work-orders/" + encodeURIComponent(val("#wo")) + "?organizationId=" + encodeURIComponent(val("#org")), {
+          method: "POST",
+          body: JSON.stringify({ createdBy: val("#actor") })
+        });
+        lastReportId = data.report.id;
+        await refresh();
+      });
+
+      document.querySelector("#report-approve").addEventListener("click", async () => {
+        if (!lastReportId) {
+          const versions = await call("/reports/work-orders/" + encodeURIComponent(val("#wo")) + "?organizationId=" + encodeURIComponent(val("#org")));
+          lastReportId = versions.items[0]?.id || "";
+        }
+        await call("/reports/work-orders/" + encodeURIComponent(val("#wo")) + "/versions/" + encodeURIComponent(lastReportId) + "/decision?organizationId=" + encodeURIComponent(val("#org")), {
+          method: "POST",
+          body: JSON.stringify({ decidedBy: val("#actor"), decision: "approved", notes: "Relatorio validado." })
+        });
+        await refresh();
+      });
 
       document.querySelector("#budget").addEventListener("click", async () => {
         await call("/maintenance/work-orders/" + encodeURIComponent(val("#wo")) + "/budget", { method: "POST", body: JSON.stringify({ organizationId: val("#org"), amount: 2480, currency: "BRL", notes: "Troca preventiva aprovada para evitar parada." }) });

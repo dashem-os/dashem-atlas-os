@@ -84,8 +84,14 @@ create table if not exists work_order_evidence (
   work_order_id text not null references work_orders(id),
   kind text not null,
   title text not null,
+  file_name text,
+  mime_type text,
+  size_bytes integer,
+  content_base64 text,
   url text,
   notes text,
+  metadata jsonb not null default '{}'::jsonb,
+  ocr_text text,
   attached_by text,
   attached_at timestamptz not null default now()
 );
@@ -117,3 +123,24 @@ create table if not exists ai_artifacts (
 
 create index if not exists ai_artifacts_work_order_idx
   on ai_artifacts (organization_id, work_order_id, created_at desc);
+
+create table if not exists technical_report_versions (
+  id text primary key,
+  organization_id text not null references organizations(id),
+  work_order_id text not null references work_orders(id),
+  version integer not null,
+  state text not null,
+  title text not null,
+  html text not null,
+  pdf_base64 text not null,
+  timeline_event_count integer not null,
+  created_by text,
+  created_at timestamptz not null default now(),
+  decided_by text,
+  decided_at timestamptz,
+  decision_notes text,
+  unique (organization_id, work_order_id, version)
+);
+
+create index if not exists technical_report_versions_work_order_idx
+  on technical_report_versions (organization_id, work_order_id, version desc);
