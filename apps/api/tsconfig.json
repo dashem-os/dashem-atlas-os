@@ -11,6 +11,7 @@
     { "path": "../../modules/assets" },
     { "path": "../../modules/maintenance" },
     { "path": "../../modules/monitoring" },
+    { "path": "../../modules/operations" },
     { "path": "../../modules/reports" },
     { "path": "../../modules/timeline" },
     { "path": "../../modules/ai" },

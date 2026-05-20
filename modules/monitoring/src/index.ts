@@ -53,7 +53,12 @@ const monitoringEvents = new Set([
 ]);
 
 export function shouldMonitorEvent(event: DomainEvent): boolean {
-  return Boolean(event.metadata.organizationId && event.metadata.subjectId && !monitoringEvents.has(event.name));
+  return Boolean(
+    event.metadata.organizationId &&
+      event.metadata.subjectId &&
+      event.metadata.sourceModule !== "operations" &&
+      !monitoringEvents.has(event.name)
+  );
 }
 
 export async function evaluateOperationalAwareness(

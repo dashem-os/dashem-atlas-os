@@ -200,3 +200,167 @@ Rules:
 - Every operational perception is published as an event and appears in the timeline.
 - The monitoring/AI layer can detect and suggest, but never executes mitigation automatically.
 - Health scores are recalculated after relevant events.
+
+## Sprint 5: Cognitive Operational Runtime
+
+Sprint 5 moves Atlas from assistive AI into governed cognitive coordination. The runtime reads the timeline as operational memory, coordinates specialized deterministic agents, writes every relevant decision trace back as events, and requests human decision whenever the plan touches critical action.
+
+Operations endpoints:
+
+- `POST /operations/work-orders/:id/coordinate`
+- `GET /operations/knowledge-graph?organizationId=...&subjectId=...`
+- `GET /operations/digital-twin?organizationId=...&subjectId=...`
+
+Coordination body:
+
+```json
+{
+  "organizationId": "org_demo",
+  "domain": "maintenance",
+  "actorId": "usr_demo",
+  "specialists": [
+    {
+      "id": "usr_specialist",
+      "name": "Ana Tecnica",
+      "domains": ["maintenance"],
+      "skills": ["equipment", "rotating_equipment", "field_supervision"],
+      "activeWorkOrders": 2
+    }
+  ]
+}
+```
+
+Sprint 5 events:
+
+- `WorkflowCoordinationStarted`
+- `RiskEscalationSuggested`
+- `SpecialistAssignmentRecommended`
+- `MissingContextRequested`
+- `OperationalPlanGenerated`
+- `HumanDecisionRequested`
+- `PredictiveRiskDetected`
+- `OperationalPatternIdentified`
+- `KnowledgeGraphRelationCreated`
+- `DigitalTwinStateUpdated`
+
+Rules:
+
+- Coordination requires existing timeline memory.
+- Runtime can coordinate, recommend, prioritize, request context, and explain.
+- Critical action is never executed automatically; the runtime emits `HumanDecisionRequested`.
+- Operational reasoning is stored in the plan metadata and timeline.
+- Knowledge graph relations and digital twin state are updated through operational events.
+- Domains are represented through a common operational abstraction: `maintenance`, `construction`, `facilities`, `logistics`, and `compliance`.
+
+## Sprint 6: Cognitive Runtime Persistence & Operational Visualization
+
+Sprint 6 consolidates the cognitive kernel into persistent, auditable, replayable operational infrastructure. The runtime still coordinates and recommends only; critical decisions continue to require human approval.
+
+Persistence:
+
+- Knowledge graph state is stored in `.atlas-data/knowledge-graph.json`.
+- Digital twin live state and snapshots are stored in `.atlas-data/digital-twin.json`.
+- Cognitive coordination history is stored in `.atlas-data/cognitive-history.json`.
+- The JSON repositories are deliberately isolated behind module contracts so they can be replaced by Postgres without changing runtime behavior.
+
+Runtime endpoints:
+
+- `GET /operations/runtime-dashboard?organizationId=...&subjectId=...`
+- `GET /operations/coordination-history?organizationId=...&subjectId=...`
+- `POST /operations/timeline/:subjectId/replay`
+
+Replay body:
+
+```json
+{
+  "organizationId": "org_demo",
+  "limit": 500
+}
+```
+
+Sprint 6 events:
+
+- `KnowledgeGraphNodeCreated`
+- `KnowledgeGraphRelationPersisted`
+- `OperationalCausalityDetected`
+- `DigitalTwinSnapshotCreated`
+- `DigitalTwinStatePersisted`
+- `OperationalStateTransitionDetected`
+- `CognitiveWorkflowPersisted`
+- `OperationalReasoningCaptured`
+- `HumanDecisionContextStored`
+- `TimelineReplayStarted`
+- `OperationalContextReconstructed`
+- `HistoricalOperationalStateLoaded`
+- `RuntimeMetricCaptured`
+- `OperationalTelemetryUpdated`
+- `CoordinationPerformanceMeasured`
+
+Rules:
+
+- Every cognitive workflow is persisted with context event references, plan, risk, specialist recommendation, human decision boundary, and reasoning trace.
+- Every digital twin update creates a temporal snapshot.
+- Knowledge graph relations are versioned and can produce basic operational causality signals.
+- Timeline replay reconstructs historical operational state from timeline memory.
+- The web app includes a runtime cockpit for live feed, active coordination, pending human decisions, health, digital twin, and graph relations.
+
+## Sprint 7: Autonomous Operational Simulation & Foresight Engine
+
+Sprint 7 adds operational foresight without autonomous execution. Atlas can forecast, simulate, compare and explain future operational scenarios, but simulated paths remain isolated from the live Digital Twin and every critical implication triggers a human approval gate.
+
+Foresight persistence:
+
+- Forecasts, scenarios, simulations, comparisons, and temporal analytics are stored in `.atlas-data/foresight.json`.
+- Forecasts reference timeline events and include explicit origin, context, causality, expected impact, confidence, and approval gate.
+- Scenario simulation projects future risk, health score, SLA state and cost multiplier without mutating real operational state.
+
+Foresight endpoints:
+
+- `POST /operations/work-orders/:id/forecast`
+- `POST /operations/work-orders/:id/simulate`
+- `POST /operations/work-orders/:id/temporal-analytics`
+- `GET /operations/foresight?organizationId=...&subjectId=...`
+
+Simulation body:
+
+```json
+{
+  "organizationId": "org_demo",
+  "domain": "maintenance",
+  "scenarios": ["delay", "continue_operating", "sla_missed", "specialist_changed", "missing_evidence"]
+}
+```
+
+Sprint 7 events:
+
+- `OperationalForecastGenerated`
+- `FutureRiskPredicted`
+- `OperationalImpactEstimated`
+- `CostEscalationPredicted`
+- `OperationalBottleneckDetected`
+- `OperationalScenarioCreated`
+- `OperationalScenarioSimulated`
+- `AlternativeOperationalPathGenerated`
+- `ScenarioComparisonCompleted`
+- `PreventiveActionSuggested`
+- `ProactiveEscalationRecommended`
+- `OperationalInterventionSuggested`
+- `PredictiveCoordinationTriggered`
+- `OperationalPatternCorrelated`
+- `CausalOperationalRelationDetected`
+- `OperationalSimilarityIdentified`
+- `TemporalAnalyticsGenerated`
+- `OperationalTrendDetected`
+- `RiskEvolutionTracked`
+- `PredictionConfidenceCalculated`
+- `OperationalExplanationGenerated`
+- `HumanApprovalGateTriggered`
+
+Rules:
+
+- Forecasting requires timeline memory.
+- Predictions never mutate work orders, assets, Digital Twin live state, or approvals.
+- Simulated scenarios are explicitly marked `isolatedFromState: true`.
+- Every prediction carries confidence and operational explanation.
+- High/critical forecast implications trigger `HumanApprovalGateTriggered`.
+- Predictive coordination remains recommendation-only unless a human decides.

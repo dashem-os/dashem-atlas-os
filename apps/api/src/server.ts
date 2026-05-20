@@ -46,6 +46,23 @@ import {
   type HealthScore,
   type OperationalAlert
 } from "@atlas/module-monitoring";
+import {
+  calculateRuntimeDiagnostics,
+  executeCognitiveWorkflow,
+  generateOperationalForecast,
+  generateTemporalAnalytics,
+  ingestEventIntoKnowledgeGraph,
+  JsonCognitiveWorkflowHistoryRepository,
+  JsonDigitalTwinRepository,
+  JsonForesightRepository,
+  JsonKnowledgeGraphRepository,
+  publishCoordinationPerformance,
+  replayTimeline,
+  simulateOperationalScenarios,
+  type ScenarioKind,
+  type OperationalDomain,
+  type OperationalSpecialist
+} from "@atlas/module-operations";
 
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
 const environment = process.env.ATLAS_ENV === "production" ? "production" : "development";
@@ -56,6 +73,10 @@ const timeline = new InMemoryTimelineRepository();
 const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
 const reports = new Map<string, TechnicalReportVersion[]>();
+const knowledgeGraph = new JsonKnowledgeGraphRepository();
+const digitalTwin = new JsonDigitalTwinRepository();
+const cognitiveHistory = new JsonCognitiveWorkflowHistoryRepository();
+const foresight = new JsonForesightRepository();
 const operationalFeed: unknown[] = [];
 const operationalAlerts: OperationalAlert[] = [];
 const healthScores = new Map<string, HealthScore>();
@@ -66,6 +87,10 @@ bus.subscribeAll((event) => {
   telemetry.increment(`events.${event.name}`);
   operationalFeed.unshift(event);
   operationalFeed.splice(200);
+});
+
+bus.subscribeAll(async (event) => {
+  await ingestEventIntoKnowledgeGraph(event, knowledgeGraph, bus);
 });
 
 bus.subscribeAll(async (event) => {
@@ -120,6 +145,7 @@ const modules = [
   "workflow",
   "timeline",
   "ai",
+  "operations",
   "notifications",
   "monitoring"
 ] as const;
@@ -197,6 +223,60 @@ async function buildAiMemory(workOrderId: EntityId, organizationId: Organization
   };
 }
 
+async function buildOperationalSnapshot(
+  workOrderId: EntityId,
+  organizationId: OrganizationId,
+  domain: OperationalDomain,
+  availableSpecialists?: readonly OperationalSpecialist[]
+) {
+  const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+  const asset = await findAssetOrThrow(workOrder.assetId, organizationId);
+  const entries = await timeline.list({ organizationId, subjectId: workOrder.id, limit: 200 });
+  const score = healthScores.get(`${organizationId}:work_order:${workOrder.id}`);
+  const alerts = operationalAlerts.filter((alert) => alert.organizationId === organizationId && alert.subjectId === workOrder.id);
+  const openChecklist = workOrder.checklist.filter((item) => item.state !== "done").length;
+
+  return {
+    organizationId,
+    subjectId: workOrder.id,
+    domain,
+    timeline: entries,
+    asset: {
+      id: asset.id,
+      name: asset.name,
+      kind: asset.kind,
+      criticality: asset.criticality,
+      ...(asset.location ? { location: asset.location } : {})
+    },
+    workOrder: {
+      id: workOrder.id,
+      title: workOrder.title,
+      ...(workOrder.description ? { description: workOrder.description } : {}),
+      priority: workOrder.priority,
+      state: workOrder.state,
+      ...(workOrder.dueAt ? { dueAt: workOrder.dueAt } : {}),
+      evidenceCount: workOrder.evidence.length,
+      checklistOpenCount: openChecklist,
+      ...(workOrder.budget?.state ? { budgetState: workOrder.budget.state } : {})
+    },
+    ...(score
+      ? {
+          healthScore: {
+            score: score.score,
+            grade: score.grade,
+            reasons: score.reasons
+          }
+        }
+      : {}),
+    alerts: alerts.map((alert) => ({
+      eventName: alert.eventName,
+      severity: alert.severity,
+      title: alert.title
+    })),
+    ...(availableSpecialists ? { availableSpecialists } : {})
+  };
+}
+
 function reportKey(organizationId: OrganizationId, workOrderId: EntityId): string {
   return `${organizationId}:${workOrderId}`;
 }
@@ -218,6 +298,23 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "OPTIONS") {
       send(response, 204, {});
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/") {
+      send(response, 200, {
+        service: "atlas-api",
+        ok: true,
+        web: "http://localhost:5173",
+        health: "/health",
+        runtime: {
+          dashboard: "/operations/runtime-dashboard?organizationId=org_demo",
+          knowledgeGraph: "/operations/knowledge-graph?organizationId=org_demo",
+          digitalTwin: "/operations/digital-twin?organizationId=org_demo",
+          foresight: "/operations/foresight?organizationId=org_demo"
+        },
+        note: "Atlas API is running. Open the web cockpit at http://localhost:5173."
+      });
       return;
     }
 
@@ -719,6 +816,244 @@ const server = createServer(async (request, response) => {
         approval,
         workOrder: updated,
         timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: payload.subjectId })
+      });
+      return;
+    }
+
+    const operationalRuntimeMatch = url.pathname.match(/^\/operations\/work-orders\/([^/]+)\/coordinate$/);
+    if (request.method === "POST" && operationalRuntimeMatch) {
+      const workOrderId = operationalRuntimeMatch[1] as EntityId;
+      const payload = await readJson<{
+        organizationId: OrganizationId;
+        actorId?: UserId;
+        domain?: OperationalDomain;
+        specialists?: readonly OperationalSpecialist[];
+      }>(request);
+      const ctx = context(request, payload.organizationId);
+      const snapshot = await buildOperationalSnapshot(
+        workOrderId,
+        payload.organizationId,
+        payload.domain ?? "maintenance",
+        payload.specialists
+      );
+      const startedAt = Date.now();
+      const run = await executeCognitiveWorkflow(
+        snapshot,
+        {
+          ...(payload.actorId ? { actorId: payload.actorId } : {}),
+          roles: ctx.actor?.roles ?? ["operator"],
+          canCoordinate: true,
+          canRequestHumanDecision: true
+        },
+        ctx,
+        bus,
+        knowledgeGraph,
+        digitalTwin,
+        cognitiveHistory
+      );
+      telemetry.increment("runtime.coordinations");
+      telemetry.increment(`runtime.risk.${run.riskLevel}`);
+      if (run.escalationSuggested) {
+        telemetry.increment("runtime.escalations");
+      }
+      if (run.decisionBoundary === "human_required") {
+        telemetry.increment("runtime.human_decisions_requested");
+      }
+      await publishCoordinationPerformance(snapshot, ctx, bus, Date.now() - startedAt, { workflowRunId: run.id });
+
+      send(response, 201, {
+        run,
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }),
+        knowledgeGraph: await knowledgeGraph.list(payload.organizationId, workOrderId),
+        digitalTwin: await digitalTwin.list(payload.organizationId, workOrderId)
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/operations/runtime-dashboard") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      const history = await cognitiveHistory.list(organizationId, subjectId ?? undefined);
+      const twins = await digitalTwin.list(organizationId, subjectId ?? undefined);
+      const relations = await knowledgeGraph.list(organizationId, subjectId ?? undefined);
+      const forecasts = await foresight.listForecasts(organizationId, subjectId ?? undefined);
+      const scenarios = await foresight.listScenarios(organizationId, subjectId ?? undefined);
+      const simulations = await foresight.listSimulations(organizationId, subjectId ?? undefined);
+      const comparisons = await foresight.listComparisons(organizationId, subjectId ?? undefined);
+      const temporalAnalytics = await foresight.listAnalytics(organizationId, subjectId ?? undefined);
+      const diagnostics = calculateRuntimeDiagnostics(organizationId, history, twins);
+      telemetry.gauge("runtime.coordinations.total", diagnostics.metrics.totalCoordinations);
+      telemetry.gauge("runtime.risk.average", diagnostics.metrics.averageRiskScore);
+      telemetry.gauge("runtime.human_decisions.pending", diagnostics.metrics.pendingHumanDecisions);
+      send(response, 200, {
+        feed: operationalFeed
+          .filter((item) => {
+            const event = item as { metadata?: { organizationId?: OrganizationId; subjectId?: EntityId } };
+            return event.metadata?.organizationId === organizationId && (subjectId ? event.metadata.subjectId === subjectId : true);
+          })
+          .slice(0, 40),
+        activeCoordinations: history.slice(0, 10),
+        pendingHumanDecisions: history.filter((record) => record.humanDecisionRequested).slice(0, 10),
+        risks: history.flatMap((record) => record.predictiveRisks).slice(0, 20),
+        healthScores: [...healthScores.values()].filter((score) => score.organizationId === organizationId && (subjectId ? score.subjectId === subjectId : true)),
+        digitalTwin: twins,
+        knowledgeGraph: relations,
+        forecasts,
+        scenarios,
+        simulations,
+        comparisons,
+        temporalAnalytics,
+        diagnostics
+      });
+      return;
+    }
+
+    const forecastMatch = url.pathname.match(/^\/operations\/work-orders\/([^/]+)\/forecast$/);
+    if (request.method === "POST" && forecastMatch) {
+      const workOrderId = forecastMatch[1] as EntityId;
+      const payload = await readJson<{ organizationId: OrganizationId; domain?: OperationalDomain }>(request);
+      const snapshot = await buildOperationalSnapshot(workOrderId, payload.organizationId, payload.domain ?? "maintenance");
+      const forecast = await generateOperationalForecast(
+        snapshot,
+        await knowledgeGraph.list(payload.organizationId, workOrderId),
+        await digitalTwin.list(payload.organizationId, workOrderId),
+        await cognitiveHistory.list(payload.organizationId, workOrderId),
+        foresight,
+        context(request, payload.organizationId),
+        bus
+      );
+      send(response, 201, {
+        forecast,
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId }),
+        approvalGate: forecast.approvalGate
+      });
+      return;
+    }
+
+    const simulationMatch = url.pathname.match(/^\/operations\/work-orders\/([^/]+)\/simulate$/);
+    if (request.method === "POST" && simulationMatch) {
+      const workOrderId = simulationMatch[1] as EntityId;
+      const payload = await readJson<{ organizationId: OrganizationId; domain?: OperationalDomain; scenarios?: readonly ScenarioKind[] }>(request);
+      const snapshot = await buildOperationalSnapshot(workOrderId, payload.organizationId, payload.domain ?? "maintenance");
+      const latestForecast = (await foresight.listForecasts(payload.organizationId, workOrderId))[0];
+      const comparison = await simulateOperationalScenarios(
+        snapshot,
+        payload.scenarios ?? ["delay", "continue_operating", "sla_missed", "specialist_changed", "missing_evidence"],
+        latestForecast,
+        foresight,
+        context(request, payload.organizationId),
+        bus
+      );
+      send(response, 201, {
+        comparison,
+        scenarios: await foresight.listScenarios(payload.organizationId, workOrderId),
+        simulations: await foresight.listSimulations(payload.organizationId, workOrderId),
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId })
+      });
+      return;
+    }
+
+    const analyticsMatch = url.pathname.match(/^\/operations\/work-orders\/([^/]+)\/temporal-analytics$/);
+    if (request.method === "POST" && analyticsMatch) {
+      const workOrderId = analyticsMatch[1] as EntityId;
+      const payload = await readJson<{ organizationId: OrganizationId; domain?: OperationalDomain }>(request);
+      const snapshot = await buildOperationalSnapshot(workOrderId, payload.organizationId, payload.domain ?? "maintenance");
+      const analytics = await generateTemporalAnalytics(
+        snapshot,
+        await cognitiveHistory.list(payload.organizationId, workOrderId),
+        digitalTwin.snapshots ? await digitalTwin.snapshots(payload.organizationId, workOrderId) : await digitalTwin.list(payload.organizationId, workOrderId),
+        foresight,
+        context(request, payload.organizationId),
+        bus
+      );
+      send(response, 201, {
+        analytics,
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId: workOrderId })
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/operations/foresight") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      send(response, 200, {
+        forecasts: await foresight.listForecasts(organizationId, subjectId ?? undefined),
+        scenarios: await foresight.listScenarios(organizationId, subjectId ?? undefined),
+        simulations: await foresight.listSimulations(organizationId, subjectId ?? undefined),
+        comparisons: await foresight.listComparisons(organizationId, subjectId ?? undefined),
+        temporalAnalytics: await foresight.listAnalytics(organizationId, subjectId ?? undefined)
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/operations/knowledge-graph") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      send(response, 200, {
+        nodes: knowledgeGraph.listNodes ? await knowledgeGraph.listNodes(organizationId) : [],
+        relations: await knowledgeGraph.list(organizationId, subjectId ?? undefined),
+        versions: knowledgeGraph.listVersions ? await knowledgeGraph.listVersions(organizationId) : [],
+        causalities: knowledgeGraph.listCausalities ? await knowledgeGraph.listCausalities(organizationId, subjectId ?? undefined) : []
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/operations/digital-twin") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      send(response, 200, {
+        live: await digitalTwin.list(organizationId, subjectId ?? undefined),
+        snapshots: digitalTwin.snapshots ? await digitalTwin.snapshots(organizationId, subjectId ?? undefined) : []
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/operations/coordination-history") {
+      const organizationId = organizationFrom(url, request);
+      const subjectId = url.searchParams.get("subjectId") as EntityId | null;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      send(response, 200, { items: await cognitiveHistory.list(organizationId, subjectId ?? undefined) });
+      return;
+    }
+
+    const replayMatch = url.pathname.match(/^\/operations\/timeline\/([^/]+)\/replay$/);
+    if (request.method === "POST" && replayMatch) {
+      const subjectId = replayMatch[1] as EntityId;
+      const payload = await readJson<{ organizationId: OrganizationId; limit?: number }>(request);
+      const entries = await timeline.list({ organizationId: payload.organizationId, subjectId, limit: payload.limit ?? 500 });
+      const reconstructed = await replayTimeline(payload.organizationId, subjectId, entries, context(request, payload.organizationId), bus);
+      send(response, 201, {
+        reconstructed,
+        timeline: await timeline.list({ organizationId: payload.organizationId, subjectId })
       });
       return;
     }

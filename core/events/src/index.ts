@@ -10,6 +10,7 @@ export type EventOriginModule =
   | "workflow"
   | "timeline"
   | "ai"
+  | "operations"
   | "notifications"
   | "reports"
   | "monitoring";
