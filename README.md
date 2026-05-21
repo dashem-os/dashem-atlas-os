@@ -6,7 +6,8 @@ Atlas OS is organized as an operational monorepo with executable apps, shared co
 
 - `apps/api`: HTTP API boundary.
 - `apps/worker`: background event processor.
-- `apps/web`: current ATLAS OS Field PWA shell for mobile-first operations.
+- `apps/field`: ATLAS OS Field PWA shell for mobile-first operations.
+- `apps/web`: ATLAS OS Enterprise web shell for administrative ERP, runtime cockpit and governance.
 - `core/events`: typed event bus and event envelope.
 - `core/database`: repository and unit-of-work contracts.
 - `core/security`: password hashing, token signing, and authorization policies.
@@ -20,11 +21,12 @@ npm install
 npm run infra:up
 npm run build
 npm run dev:api
+npm run dev:field
+npm run dev:enterprise
 npm run dev:worker
-npm run dev:web
 ```
 
-The current foundation is intentionally dependency-light. The API and worker can run on Node primitives, while the Field web app is a static operational PWA shell that can later be upgraded to a framework when product flows settle.
+The current foundation is intentionally dependency-light. The API and worker can run on Node primitives, while Field and Enterprise are static web shells that can later be upgraded to a framework when product flows settle.
 
 ## Product Lines
 
@@ -33,7 +35,7 @@ ATLAS OS has two experiences over the same core:
 - **ATLAS OS Field**: mobile-first PWA for technicians, lightweight finance users, autonomous workers, microbusinesses and supervisors. Its primary surface is an operational card dashboard with bottom navigation, a floating quick action button and AI in context.
 - **ATLAS OS Enterprise**: web-first administrative product for large engineering, maintenance and operations companies. It owns denser governance surfaces such as runtime cockpit, digital twin, knowledge graph, foresight, advanced finance, reports, integrations and permissions.
 
-Both lines use the same Agentic Platform, AI Gateway, event stream, operational timeline, modules and the five ATLAS OS pillars. Field must stay "touch and execute"; Enterprise is "administer, govern and analyze". See [docs/PRODUCT_LINES.md](docs/PRODUCT_LINES.md) before changing app architecture or navigation patterns.
+Both lines use the same Agentic Platform, AI Gateway, event stream, operational timeline, modules and the five ATLAS OS pillars. Field must stay "touch and execute"; Enterprise is "administer, govern and analyze". See [docs/PRODUCT_LINES.md](docs/PRODUCT_LINES.md) and [docs/FIELD_ENTERPRISE_SPLIT.md](docs/FIELD_ENTERPRISE_SPLIT.md) before changing app architecture or navigation patterns.
 
 ## Architectural Rules
 

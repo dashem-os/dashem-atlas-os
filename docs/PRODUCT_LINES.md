@@ -85,18 +85,25 @@ Enterprise can be operationally dense, but it must still use modern product desi
 
 ## Implementation Guidance
 
-The current `apps/web` shell is ATLAS OS Field unless a future refactor splits apps explicitly.
+Current app split:
 
-When Enterprise evolves, prefer one of these structures:
+- `apps/field` is ATLAS OS Field.
+- `apps/web` is ATLAS OS Enterprise.
+
+This split exists because Field and Enterprise must not overwrite each other. The Field PWA was initially implemented over `apps/web`; that was corrected by restoring the Enterprise web shell and moving the Field PWA into `apps/field`.
+
+When either product evolves, preserve this structure:
 
 ```txt
 apps/field
-apps/enterprise
+apps/web
 apps/api
 apps/worker
 ```
 
-or a route-level split inside the current web app:
+The current repository still uses `apps/web` as the Enterprise package name for backward compatibility. If renaming later, migrate `apps/web` to `apps/enterprise` intentionally in a dedicated commit.
+
+Avoid a route-level split unless there is a strong reason:
 
 ```txt
 /field

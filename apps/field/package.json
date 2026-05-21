@@ -1,0 +1,13 @@
+{
+  "name": "@atlas/field",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "npm run build && node dist/server.js",
+    "start": "node dist/server.js"
+  }
+}

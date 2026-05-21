@@ -19,6 +19,7 @@
     { "path": "./modules/notifications" },
     { "path": "./modules/reports" },
     { "path": "./apps/api" },
+    { "path": "./apps/field" },
     { "path": "./apps/worker" },
     { "path": "./apps/web" }
   ]
