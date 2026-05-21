@@ -1,12 +1,12 @@
 # Atlas OS
 
-Atlas OS is organized as an operational monorepo with three executable apps, shared core services, and domain modules.
+Atlas OS is organized as an operational monorepo with executable apps, shared core services, and domain modules. It supports two product lines over the same intelligent core: ATLAS OS Field and ATLAS OS Enterprise.
 
 ## Workspace Map
 
 - `apps/api`: HTTP API boundary.
 - `apps/worker`: background event processor.
-- `apps/web`: browser shell for operations.
+- `apps/web`: current ATLAS OS Field PWA shell for mobile-first operations.
 - `core/events`: typed event bus and event envelope.
 - `core/database`: repository and unit-of-work contracts.
 - `core/security`: password hashing, token signing, and authorization policies.
@@ -24,7 +24,16 @@ npm run dev:worker
 npm run dev:web
 ```
 
-The current foundation is intentionally dependency-light. The API and worker can run on Node primitives, while the web app is a static operational shell that can later be upgraded to a framework when product flows settle.
+The current foundation is intentionally dependency-light. The API and worker can run on Node primitives, while the Field web app is a static operational PWA shell that can later be upgraded to a framework when product flows settle.
+
+## Product Lines
+
+ATLAS OS has two experiences over the same core:
+
+- **ATLAS OS Field**: mobile-first PWA for technicians, lightweight finance users, autonomous workers, microbusinesses and supervisors. Its primary surface is an operational card dashboard with bottom navigation, a floating quick action button and AI in context.
+- **ATLAS OS Enterprise**: web-first administrative product for large engineering, maintenance and operations companies. It owns denser governance surfaces such as runtime cockpit, digital twin, knowledge graph, foresight, advanced finance, reports, integrations and permissions.
+
+Both lines use the same Agentic Platform, AI Gateway, event stream, operational timeline, modules and the five ATLAS OS pillars. Field must stay "touch and execute"; Enterprise is "administer, govern and analyze". See [docs/PRODUCT_LINES.md](docs/PRODUCT_LINES.md) before changing app architecture or navigation patterns.
 
 ## Architectural Rules
 
@@ -302,7 +311,7 @@ Rules:
 - Every digital twin update creates a temporal snapshot.
 - Knowledge graph relations are versioned and can produce basic operational causality signals.
 - Timeline replay reconstructs historical operational state from timeline memory.
-- The web app includes a runtime cockpit for live feed, active coordination, pending human decisions, health, digital twin, and graph relations.
+- Enterprise should expose a runtime cockpit for live feed, active coordination, pending human decisions, health, digital twin, and graph relations. Field may surface selected runtime signals only when they help immediate field execution.
 
 ## Sprint 7: Autonomous Operational Simulation & Foresight Engine
 

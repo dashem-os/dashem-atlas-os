@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { InMemoryTenantRepository } from "@atlas/core-database";
 import { createEvent, InMemoryEventBus } from "@atlas/core-events";
 import { Telemetry } from "@atlas/core-observability";
-import type { EntityId, OperationalContext, OrganizationId, UserId } from "@atlas/core-shared";
+import { systemClock, type EntityId, type OperationalContext, type OrganizationId, type UserId } from "@atlas/core-shared";
 import { archiveAsset, assertAssetTenant, registerAsset, updateAsset, type Asset } from "@atlas/module-assets";
 import { registerUser } from "@atlas/module-auth";
 import {
@@ -15,7 +15,7 @@ import {
   uploadEvidence,
   type WorkOrder
 } from "@atlas/module-maintenance";
-import { createOrganization } from "@atlas/module-organizations";
+import { createOrganization, type Organization } from "@atlas/module-organizations";
 import {
   addTimelineEntry,
   attachPhotoTitle,
@@ -72,6 +72,7 @@ const telemetry = new Telemetry();
 const timeline = new InMemoryTimelineRepository();
 const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
+const organizations = new Map<OrganizationId, Organization>();
 const reports = new Map<string, TechnicalReportVersion[]>();
 const knowledgeGraph = new JsonKnowledgeGraphRepository();
 const digitalTwin = new JsonDigitalTwinRepository();
@@ -179,7 +180,7 @@ function send(response: ServerResponse, statusCode: number, body: unknown): void
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type,x-request-id,x-organization-id,x-user-id"
   });
   response.end(statusCode === 204 ? undefined : JSON.stringify(body, null, 2));
@@ -308,10 +309,10 @@ const server = createServer(async (request, response) => {
         web: "http://localhost:5173",
         health: "/health",
         runtime: {
-          dashboard: "/operations/runtime-dashboard?organizationId=org_demo",
-          knowledgeGraph: "/operations/knowledge-graph?organizationId=org_demo",
-          digitalTwin: "/operations/digital-twin?organizationId=org_demo",
-          foresight: "/operations/foresight?organizationId=org_demo"
+          dashboard: "/operations/runtime-dashboard?organizationId=<organizationId>",
+          knowledgeGraph: "/operations/knowledge-graph?organizationId=<organizationId>",
+          digitalTwin: "/operations/digital-twin?organizationId=<organizationId>",
+          foresight: "/operations/foresight?organizationId=<organizationId>"
         },
         note: "Atlas API is running. Open the web cockpit at http://localhost:5173."
       });
@@ -319,7 +320,6 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && url.pathname === "/health") {
-      telemetry.gauge("timeline.entries", (await timeline.list({ organizationId: "org_demo" as OrganizationId })).length);
       send(response, 200, { ok: true, service: "atlas-api", modules, events: bus.published.length });
       return;
     }
@@ -376,9 +376,15 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/organizations") {
+      send(response, 200, { items: Array.from(organizations.values()) });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/organizations") {
-      const payload = await readJson<{ name: string; slug: string }>(request);
+      const payload = await readJson<{ name: string; slug: string; type?: "corporate" | "private"; monthlyContractValue?: number; targetSla?: number }>(request);
       const organization = await createOrganization(payload, context(request), bus);
+      organizations.set(organization.id, organization);
       send(response, 201, { organization });
       return;
     }
@@ -472,6 +478,22 @@ const server = createServer(async (request, response) => {
         const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
         send(response, 200, {
           workOrder,
+          timeline: await timeline.list({ organizationId, subjectId: workOrder.id })
+        });
+        return;
+      }
+
+      if (request.method === "PATCH") {
+        const payload = await readJson<Partial<WorkOrder>>(request);
+        const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+        const updated: WorkOrder = {
+          ...workOrder,
+          ...payload,
+          updatedAt: systemClock.now()
+        };
+        await workOrders.save(updated);
+        send(response, 200, {
+          workOrder: updated,
           timeline: await timeline.list({ organizationId, subjectId: workOrder.id })
         });
         return;

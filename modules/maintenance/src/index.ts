@@ -39,9 +39,23 @@ export interface Budget {
   readonly amount: number;
   readonly currency: string;
   readonly state: BudgetState;
+  readonly materialsTotal?: number;
+  readonly laborTotal?: number;
+  readonly marginPercent?: number;
+  readonly durationHours?: number;
+  readonly riskLevel?: "low" | "medium" | "high" | "critical";
+  readonly notes?: string;
   readonly submittedAt?: ISODateTime;
   readonly decidedAt?: ISODateTime;
   readonly decidedBy?: UserId;
+}
+
+export interface MaterialItem {
+  readonly id: EntityId;
+  readonly name: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+  readonly totalPrice: number;
 }
 
 export interface WorkOrder extends AtlasEntity, TenantScoped {
@@ -51,6 +65,13 @@ export interface WorkOrder extends AtlasEntity, TenantScoped {
   readonly priority: WorkOrderPriority;
   readonly state: WorkOrderState;
   readonly dueAt?: ISODateTime;
+  readonly technicianName?: string;
+  readonly diagnosis?: string;
+  readonly materials: readonly MaterialItem[];
+  readonly laborHours?: number;
+  readonly laborRate?: number;
+  readonly laborCost?: number;
+  readonly estimatedDurationHours?: number;
   readonly checklist: readonly ChecklistItem[];
   readonly evidence: readonly Evidence[];
   readonly budget?: Budget;
@@ -64,6 +85,12 @@ export interface CreateWorkOrderCommand {
   readonly description?: string;
   readonly priority?: WorkOrderPriority;
   readonly dueAt?: ISODateTime;
+  readonly technicianName?: string;
+  readonly diagnosis?: string;
+  readonly materials?: readonly Omit<MaterialItem, "id" | "totalPrice">[];
+  readonly laborHours?: number;
+  readonly laborRate?: number;
+  readonly estimatedDurationHours?: number;
   readonly checklist?: readonly string[];
 }
 
@@ -100,6 +127,11 @@ export interface UpdateChecklistItemCommand {
 export interface SubmitBudgetCommand {
   readonly amount: number;
   readonly currency?: string;
+  readonly materialsTotal?: number;
+  readonly laborTotal?: number;
+  readonly marginPercent?: number;
+  readonly durationHours?: number;
+  readonly riskLevel?: "low" | "medium" | "high" | "critical";
   readonly notes?: string;
 }
 
@@ -117,6 +149,13 @@ export async function createWorkOrder(
     priority: command.priority ?? "normal",
     state: "opened",
     status: "active",
+    materials: (command.materials ?? []).map((material) => ({
+      id: createId("mat"),
+      name: material.name.trim(),
+      quantity: Number(material.quantity || 0),
+      unitPrice: Number(material.unitPrice || 0),
+      totalPrice: Number(material.quantity || 0) * Number(material.unitPrice || 0)
+    })),
     checklist: (command.checklist ?? []).map((label) => ({
       id: createId("chk"),
       label,
@@ -125,6 +164,14 @@ export async function createWorkOrder(
     evidence: [],
     createdAt: now,
     updatedAt: now,
+    ...(command.technicianName?.trim() ? { technicianName: command.technicianName.trim() } : {}),
+    ...(command.diagnosis?.trim() ? { diagnosis: command.diagnosis.trim() } : {}),
+    ...(command.laborHours !== undefined ? { laborHours: command.laborHours } : {}),
+    ...(command.laborRate !== undefined ? { laborRate: command.laborRate } : {}),
+    ...(command.laborHours !== undefined && command.laborRate !== undefined
+      ? { laborCost: Number(command.laborHours) * Number(command.laborRate) }
+      : {}),
+    ...(command.estimatedDurationHours !== undefined ? { estimatedDurationHours: command.estimatedDurationHours } : {}),
     ...(command.description ? { description: command.description } : {}),
     ...(command.dueAt ? { dueAt: command.dueAt } : {})
   };
@@ -139,7 +186,14 @@ export async function createWorkOrder(
         title: "OS aberta",
         body: workOrder.title,
         kind: "status",
-        metadata: { assetId: workOrder.assetId, priority: workOrder.priority }
+        metadata: {
+          assetId: workOrder.assetId,
+          priority: workOrder.priority,
+          technicianName: workOrder.technicianName,
+          dueAt: workOrder.dueAt,
+          materialsCount: workOrder.materials.length,
+          laborCost: workOrder.laborCost
+        }
       },
       context,
       { organizationId: workOrder.organizationId, subjectId: workOrder.id, sourceModule: "maintenance" }
@@ -376,6 +430,12 @@ export async function submitBudget(
     amount: command.amount,
     currency: command.currency ?? "BRL",
     state: "submitted",
+    ...(command.materialsTotal !== undefined ? { materialsTotal: command.materialsTotal } : {}),
+    ...(command.laborTotal !== undefined ? { laborTotal: command.laborTotal } : {}),
+    ...(command.marginPercent !== undefined ? { marginPercent: command.marginPercent } : {}),
+    ...(command.durationHours !== undefined ? { durationHours: command.durationHours } : {}),
+    ...(command.riskLevel ? { riskLevel: command.riskLevel } : {}),
+    ...(command.notes ? { notes: command.notes } : {}),
     submittedAt: systemClock.now()
   };
   const updated: WorkOrder = { ...workOrder, state: "waiting_budget", budget, updatedAt: systemClock.now() };
@@ -390,7 +450,15 @@ export async function submitBudget(
         title: "Orcamento enviado",
         body: command.notes,
         kind: "approval",
-        metadata: { amount: budget.amount, currency: budget.currency }
+        metadata: {
+          amount: budget.amount,
+          currency: budget.currency,
+          materialsTotal: budget.materialsTotal,
+          laborTotal: budget.laborTotal,
+          marginPercent: budget.marginPercent,
+          durationHours: budget.durationHours,
+          riskLevel: budget.riskLevel
+        }
       },
       context,
       { organizationId: updated.organizationId, subjectId: updated.id, sourceModule: "maintenance" }

@@ -71,6 +71,15 @@ export interface AiBudgetDraft {
   readonly currency: string;
   readonly estimatedMin: number;
   readonly estimatedMax: number;
+  readonly suggestedMaterials: readonly {
+    readonly name: string;
+    readonly quantity: number;
+    readonly unitPrice: number;
+  }[];
+  readonly laborHours: number;
+  readonly durationHours: number;
+  readonly riskLevel: AiRiskLevel;
+  readonly suggestedPrice: number;
   readonly lineItems: readonly {
     readonly label: string;
     readonly amount: number;
@@ -226,20 +235,47 @@ export async function classifyRisk(memory: AiWorkOrderMemory, context: Operation
 }
 
 export async function draftBudget(memory: AiWorkOrderMemory, context: OperationalContext, bus: EventBus): Promise<AiBudgetDraft> {
-  const multiplier = memory.assetCriticality === "critical" ? 1.6 : memory.priority === "urgent" ? 1.35 : 1;
-  const labor = Math.round(650 * multiplier);
-  const parts = Math.round((memory.assetKind === "equipment" ? 1200 : 500) * multiplier);
+  const text = memoryText(memory);
+  const isBearingPumpWork = text.includes("rolamento") && (text.includes("bomba") || text.includes("centrifuga"));
+  const urgencyFactor = memory.priority === "urgent" ? 1.2 : 1;
+  const criticalityFactor = memory.assetCriticality === "critical" ? 1.25 : 1;
+  const factor = urgencyFactor * criticalityFactor;
+  const suggestedMaterials = isBearingPumpWork
+    ? [
+        { name: "Rolamento compativel com bomba centrifuga", quantity: 1, unitPrice: 420 },
+        { name: "Retentor ou selo mecanico", quantity: 1, unitPrice: 260 },
+        { name: "Graxa tecnica e consumiveis", quantity: 1, unitPrice: 85 }
+      ]
+    : [
+        { name: "Pecas e consumiveis a confirmar em campo", quantity: 1, unitPrice: memory.assetKind === "equipment" ? 900 : 420 }
+      ];
+  const materialsTotal = Math.round(suggestedMaterials.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) * factor);
+  const laborHours = isBearingPumpWork ? 5 : memory.assetKind === "equipment" ? 4 : 2;
+  const durationHours = Math.ceil(laborHours * (memory.priority === "urgent" ? 0.9 : 1.15));
+  const labor = Math.round(laborHours * 165 * factor);
+  const risk = await classifyRisk(memory, context, bus);
+  const subtotal = materialsTotal + labor;
+  const suggestedPrice = Math.round(subtotal * 1.28);
   const budget: AiBudgetDraft = {
     id: createId("aib"),
     currency: "BRL",
-    estimatedMin: labor + Math.round(parts * 0.7),
-    estimatedMax: labor + Math.round(parts * 1.35),
+    estimatedMin: Math.round(subtotal * 0.92),
+    estimatedMax: Math.round(suggestedPrice * 1.12),
+    suggestedMaterials,
+    laborHours,
+    durationHours,
+    riskLevel: risk.level,
+    suggestedPrice,
     lineItems: [
       { label: "Mao de obra tecnica", amount: labor },
-      { label: "Pecas e consumiveis estimados", amount: parts },
-      { label: "Deslocamento/contingencia", amount: Math.round(240 * multiplier) }
+      { label: "Materiais estimados", amount: materialsTotal },
+      { label: "Margem tecnica e risco", amount: suggestedPrice - subtotal }
     ],
-    assumptions: ["Estimativa preliminar; exige validacao humana.", "Nao representa aprovacao de orcamento."]
+    assumptions: [
+      "Composicao preliminar baseada na descricao da OS, ativo, prioridade e criticidade.",
+      "Exige validacao humana de codigo de material, preco e escopo antes da aprovacao.",
+      "Nao representa execucao automatica nem aprovacao de orcamento."
+    ]
   };
 
   await bus.publish(
