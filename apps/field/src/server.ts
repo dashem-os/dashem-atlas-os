@@ -12,21 +12,55 @@ const html = String.raw`<!doctype html>
     <style>
       :root {
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #edf7ff;
-        background: #07131c;
-        --bg: #07131c;
-        --panel: rgba(9, 30, 44, 0.82);
-        --panel-strong: rgba(11, 40, 58, 0.94);
-        --line: rgba(73, 180, 232, 0.22);
-        --line-strong: rgba(73, 180, 232, 0.48);
-        --text-soft: #9eb7c7;
+        color: #10212c;
+        background: #f5f8fb;
+        --bg: #f5f8fb;
+        --body-bg:
+          radial-gradient(circle at 8% 0%, rgba(32, 141, 255, 0.14), transparent 34%),
+          radial-gradient(circle at 100% 16%, rgba(255, 128, 0, 0.12), transparent 28%),
+          linear-gradient(145deg, #f7fbff 0%, #eef5f9 52%, #f7f2ea 100%);
+        --panel: rgba(255, 255, 255, 0.84);
+        --panel-strong: rgba(255, 255, 255, 0.94);
+        --line: rgba(18, 93, 132, 0.18);
+        --line-strong: rgba(26, 140, 255, 0.44);
+        --text: #10212c;
+        --text-soft: #536b7a;
+        --side-bg: rgba(243, 249, 252, 0.88);
+        --bottom-bg: rgba(248, 252, 255, 0.9);
+        --input-bg: rgba(255, 255, 255, 0.92);
+        --surface-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(238, 247, 252, 0.8));
+        --shadow: 0 18px 42px rgba(32, 69, 91, 0.13);
         --blue: #1a8cff;
         --cyan: #25c7ff;
-        --green: #28d778;
+        --green: #09b86f;
         --amber: #ff9f1a;
         --orange: #ff6a00;
         --danger: #ff5a65;
-        color-scheme: dark;
+        color-scheme: light;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color: #edf7ff;
+          background: #07131c;
+          --bg: #07131c;
+          --body-bg:
+            radial-gradient(circle at 8% 0%, rgba(32, 141, 255, 0.2), transparent 34%),
+            radial-gradient(circle at 100% 16%, rgba(255, 128, 0, 0.16), transparent 28%),
+            linear-gradient(145deg, #07131c 0%, #061018 52%, #081924 100%);
+          --panel: rgba(9, 30, 44, 0.82);
+          --panel-strong: rgba(11, 40, 58, 0.94);
+          --line: rgba(73, 180, 232, 0.22);
+          --line-strong: rgba(73, 180, 232, 0.48);
+          --text: #edf7ff;
+          --text-soft: #9eb7c7;
+          --side-bg: rgba(4, 14, 22, 0.72);
+          --bottom-bg: rgba(3, 12, 19, 0.88);
+          --input-bg: rgba(4, 14, 22, 0.86);
+          --surface-gradient: linear-gradient(145deg, rgba(10, 35, 51, 0.86), rgba(4, 16, 25, 0.72));
+          --shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+          color-scheme: dark;
+        }
       }
 
       * { box-sizing: border-box; }
@@ -34,10 +68,7 @@ const html = String.raw`<!doctype html>
       body {
         min-height: 100vh;
         margin: 0;
-        background:
-          radial-gradient(circle at 8% 0%, rgba(32, 141, 255, 0.2), transparent 34%),
-          radial-gradient(circle at 100% 16%, rgba(255, 128, 0, 0.16), transparent 28%),
-          linear-gradient(145deg, #07131c 0%, #061018 52%, #081924 100%);
+        background: var(--body-bg);
       }
 
       button, input, select, textarea { font: inherit; }
@@ -57,7 +88,7 @@ const html = String.raw`<!doctype html>
         height: 100vh;
         padding: 26px 18px;
         border-right: 1px solid var(--line);
-        background: rgba(4, 14, 22, 0.72);
+        background: var(--side-bg);
         backdrop-filter: blur(20px);
       }
 
@@ -122,7 +153,7 @@ const html = String.raw`<!doctype html>
         padding: 8px 12px;
         border: 1px solid var(--line);
         border-radius: 999px;
-        background: rgba(7, 24, 36, 0.78);
+        background: var(--panel);
         color: var(--text-soft);
         display: flex;
         align-items: center;
@@ -161,8 +192,8 @@ const html = String.raw`<!doctype html>
       }
       .metric, .op-card, .panel, .order-card, .ai-card, .quick-sheet {
         border: 1px solid var(--line);
-        background: linear-gradient(145deg, rgba(10, 35, 51, 0.86), rgba(4, 16, 25, 0.72));
-        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+        background: var(--surface-gradient);
+        box-shadow: var(--shadow);
         backdrop-filter: blur(18px);
       }
       .metric {
@@ -191,7 +222,7 @@ const html = String.raw`<!doctype html>
         min-height: 132px;
         padding: 16px;
         border-radius: 8px;
-        color: #fff;
+        color: var(--text);
         display: grid;
         align-content: space-between;
         text-align: left;
@@ -201,6 +232,12 @@ const html = String.raw`<!doctype html>
         transform: translateY(-2px);
         border-color: var(--line-strong);
         box-shadow: 0 18px 44px rgba(26, 140, 255, 0.14);
+      }
+      .op-card:disabled {
+        cursor: not-allowed;
+        opacity: 0.58;
+        transform: none;
+        box-shadow: none;
       }
       .op-card strong { font-size: 16px; }
       .op-card span { color: var(--text-soft); font-size: 12px; }
@@ -248,12 +285,56 @@ const html = String.raw`<!doctype html>
         padding: 12px;
         border: 1px solid rgba(73, 180, 232, 0.18);
         border-radius: 8px;
-        background: rgba(4, 16, 25, 0.5);
+        background: color-mix(in srgb, var(--panel-strong) 68%, transparent);
         display: grid;
         gap: 4px;
       }
       .slot strong { font-size: 14px; }
       .slot small { color: var(--text-soft); line-height: 1.4; }
+      .calendar-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 18px;
+        align-items: start;
+      }
+      .calendar-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .calendar-weekday {
+        color: var(--text-soft);
+        font-size: 12px;
+        font-weight: 800;
+        text-align: center;
+      }
+      .calendar-day {
+        min-height: 86px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+        color: var(--text);
+        padding: 9px;
+        display: grid;
+        align-content: start;
+        gap: 6px;
+        text-align: left;
+      }
+      .calendar-day.muted { opacity: 0.42; }
+      .calendar-day.selected {
+        border-color: rgba(255, 159, 26, 0.72);
+        box-shadow: 0 0 20px rgba(255, 159, 26, 0.18);
+      }
+      .calendar-day.has-items::after {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 99px;
+        background: var(--amber);
+      }
+      .day-number { font-weight: 900; }
+      .day-count { color: var(--text-soft); font-size: 11px; }
 
       .orders-layout {
         display: grid;
@@ -267,7 +348,7 @@ const html = String.raw`<!doctype html>
         padding: 7px 12px;
         border: 1px solid var(--line);
         border-radius: 999px;
-        background: rgba(7, 24, 36, 0.72);
+        background: var(--panel);
         color: var(--text-soft);
         white-space: nowrap;
       }
@@ -282,7 +363,7 @@ const html = String.raw`<!doctype html>
         min-height: 112px;
         padding: 14px;
         border-radius: 8px;
-        color: #fff;
+        color: var(--text);
         text-align: left;
         display: grid;
         gap: 8px;
@@ -308,8 +389,8 @@ const html = String.raw`<!doctype html>
         border: 1px solid rgba(73, 180, 232, 0.26);
         border-radius: 8px;
         padding: 10px;
-        color: #f4fbff;
-        background: rgba(4, 14, 22, 0.86);
+        color: var(--text);
+        background: var(--input-bg);
       }
       textarea { min-height: 72px; resize: vertical; }
       .inline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -330,8 +411,13 @@ const html = String.raw`<!doctype html>
       }
       .secondary {
         border: 1px solid var(--line);
-        background: rgba(7, 24, 36, 0.82);
-        color: #d7eefb;
+        background: var(--panel);
+        color: var(--text);
+      }
+      button:disabled, .primary:disabled, .secondary:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        box-shadow: none;
       }
       .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -348,7 +434,7 @@ const html = String.raw`<!doctype html>
         gap: 8px;
         align-content: start;
       }
-      .ai-card strong { color: #fff; }
+      .ai-card strong { color: var(--text); }
       pre {
         max-height: 280px;
         overflow: auto;
@@ -363,8 +449,8 @@ const html = String.raw`<!doctype html>
 
       .fab {
         position: fixed;
-        left: 50%;
-        bottom: calc(26px + env(safe-area-inset-bottom));
+        right: 22px;
+        bottom: calc(104px + env(safe-area-inset-bottom));
         z-index: 30;
         width: 62px;
         height: 62px;
@@ -373,8 +459,10 @@ const html = String.raw`<!doctype html>
         background: radial-gradient(circle, #ffb64d 0%, #ff7a00 44%, #5a2400 100%);
         color: #fff;
         font-size: 34px;
-        transform: translateX(-50%);
+        transform: none;
         box-shadow: 0 0 28px rgba(255, 159, 26, 0.66);
+        touch-action: none;
+        user-select: none;
       }
 
       .bottom {
@@ -387,10 +475,10 @@ const html = String.raw`<!doctype html>
         min-height: calc(72px + env(safe-area-inset-bottom));
         padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
         border-top: 1px solid var(--line);
-        background: rgba(3, 12, 19, 0.88);
+        background: var(--bottom-bg);
         backdrop-filter: blur(18px);
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 4px;
       }
       .bottom button {
@@ -433,7 +521,7 @@ const html = String.raw`<!doctype html>
         .content { padding: 18px 14px 104px; }
         .topbar { align-items: start; }
         .status-pill span { display: none; }
-        .home-grid, .orders-layout { grid-template-columns: 1fr; }
+        .home-grid, .orders-layout, .calendar-layout { grid-template-columns: 1fr; }
         .ops-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .finance-grid, .ai-grid { grid-template-columns: 1fr; }
@@ -459,6 +547,7 @@ const html = String.raw`<!doctype html>
           <div class="side-label">Navegacao</div>
           <button class="active" data-tab="home"><span>⌂</span>Home operacional</button>
           <button data-tab="orders"><span>▣</span>Ordens de servico</button>
+          <button data-tab="agenda"><span>◇</span>Agenda inteligente</button>
           <button data-tab="finance"><span>$</span>Financeiro</button>
           <button data-tab="ai"><span>✦</span>Assistente IA</button>
           <button data-tab="profile"><span>○</span>Perfil</button>
@@ -583,6 +672,53 @@ const html = String.raw`<!doctype html>
           </div>
         </div>
 
+        <div id="agenda" class="view">
+          <div class="calendar-layout">
+            <section class="panel">
+              <div class="panel-title">
+                <h2>Agenda inteligente</h2>
+                <div class="calendar-tools">
+                  <input id="agenda-month" type="month" />
+                  <button class="secondary" id="agenda-today">Hoje</button>
+                </div>
+              </div>
+              <div class="calendar-grid" id="agenda-calendar"></div>
+            </section>
+
+            <aside class="panel">
+              <div class="panel-title">
+                <h3 id="agenda-selected-title">Dia selecionado</h3>
+                <span class="chip">Timeline</span>
+              </div>
+              <div class="smart-slots" id="agenda-day-list"></div>
+            </aside>
+          </div>
+
+          <form id="appointment-form" class="panel">
+            <div class="panel-title"><h3>Novo agendamento</h3><span class="chip">Sino</span></div>
+            <label>Titulo<input name="title" placeholder="Visita tecnica, retorno, aprovacao..." required /></label>
+            <div class="inline">
+              <label>Data e hora<input name="scheduledAt" type="datetime-local" required /></label>
+              <label>Duracao (min)<input name="durationMinutes" type="number" min="15" step="15" value="60" /></label>
+            </div>
+            <div class="inline">
+              <label>Tipo<select name="kind"><option value="visit">Visita</option><option value="call">Ligacao</option><option value="follow_up">Retorno</option><option value="administrative">Administrativo</option></select></label>
+              <label>OS relacionada<select id="appointment-work-order"><option value="">Sem OS vinculada</option></select></label>
+            </div>
+            <div class="inline">
+              <label>Tecnico<input name="technicianName" /></label>
+              <label>Cliente/local<input name="customerName" /></label>
+            </div>
+            <label>Endereco ou local<input name="location" /></label>
+            <label>Notas<textarea name="notes"></textarea></label>
+            <div class="inline">
+              <label><span><input name="reminderEnabled" type="checkbox" checked /> Ativar sino/lembrete</span></label>
+              <label>Previa<select name="reminderMinutesBefore"><option value="15">15 min antes</option><option value="30" selected>30 min antes</option><option value="60">1 hora antes</option><option value="1440">1 dia antes</option></select></label>
+            </div>
+            <button class="primary" type="submit">Agendar</button>
+          </form>
+        </div>
+
         <div id="finance" class="view">
           <div class="summary" id="finance-metrics"></div>
           <div class="finance-grid">
@@ -648,6 +784,7 @@ const html = String.raw`<!doctype html>
       <div class="actions">
         <button class="secondary" data-quick="work-order">Nova OS</button>
         <button class="secondary" data-quick="budget">Novo orcamento</button>
+        <button class="secondary" data-quick="agenda">Novo agendamento</button>
         <button class="secondary" data-quick="client">Novo cliente</button>
         <button class="secondary" data-quick="ai">Assistente IA</button>
       </div>
@@ -656,6 +793,7 @@ const html = String.raw`<!doctype html>
     <nav class="bottom" aria-label="Navegacao principal">
       <button class="active" data-tab="home"><b>⌂</b><span>Home</span></button>
       <button data-tab="orders"><b>▣</b><span>OS</span></button>
+      <button data-tab="agenda"><b>◇</b><span>Agenda</span></button>
       <button data-tab="finance"><b>$</b><span>Financeiro</span></button>
       <button data-tab="ai"><b>✦</b><span>IA</span></button>
       <button data-tab="profile"><b>○</b><span>Perfil</span></button>
@@ -663,12 +801,15 @@ const html = String.raw`<!doctype html>
 
     <script>
       const apiBase = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
-      const state = { organizations: [], assets: [], workOrders: [], activeOrganizationId: "", activeWorkOrderId: "", filter: "all" };
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const state = { organizations: [], assets: [], workOrders: [], appointments: [], activeOrganizationId: "", activeWorkOrderId: "", filter: "all", agendaMonth: todayIso.slice(0, 7), agendaDate: todayIso };
 
       const el = (id) => document.getElementById(id);
       const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
       const asNumber = (value) => value === "" || value === null || value === undefined ? undefined : Number(value);
       const htmlEscape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+      const dateLabel = (isoDate) => new Date(isoDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+      const dateTimeLabel = (isoDateTime) => new Date(isoDateTime).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
       async function call(path, options) {
         const response = await fetch(apiBase + path, { headers: { "content-type": "application/json" }, ...options });
@@ -704,10 +845,12 @@ const html = String.raw`<!doctype html>
         if (state.activeOrganizationId) {
           state.assets = (await call("/assets?organizationId=" + encodeURIComponent(state.activeOrganizationId))).items || [];
           state.workOrders = (await call("/maintenance/work-orders?organizationId=" + encodeURIComponent(state.activeOrganizationId))).items || [];
+          state.appointments = (await call("/field/appointments?organizationId=" + encodeURIComponent(state.activeOrganizationId))).items || [];
           if (!state.activeWorkOrderId && state.workOrders[0]) state.activeWorkOrderId = state.workOrders[0].id;
         } else {
           state.assets = [];
           state.workOrders = [];
+          state.appointments = [];
         }
 
         render();
@@ -724,12 +867,16 @@ const html = String.raw`<!doctype html>
         renderSelectedWorkOrder();
         renderFinance();
         renderAgentCards();
+        renderAgenda();
       }
 
       function renderSelectors() {
         el("organization-select").innerHTML = state.organizations.map((org) => '<option value="' + org.id + '">' + htmlEscape(org.name) + '</option>').join("");
         el("organization-select").value = state.activeOrganizationId;
-        el("asset-select").innerHTML = state.assets.map((asset) => '<option value="' + asset.id + '">' + htmlEscape(asset.name) + " - " + htmlEscape(asset.criticality) + '</option>').join("");
+        el("asset-select").innerHTML = state.assets.length
+          ? state.assets.map((asset) => '<option value="' + asset.id + '">' + htmlEscape(asset.name) + " - " + htmlEscape(asset.criticality) + '</option>').join("")
+          : '<option value="">Cadastre um ativo primeiro</option>';
+        el("appointment-work-order").innerHTML = '<option value="">Sem OS vinculada</option>' + state.workOrders.map((wo) => '<option value="' + wo.id + '">' + htmlEscape(wo.title) + '</option>').join("");
       }
 
       function renderMetrics() {
@@ -744,40 +891,96 @@ const html = String.raw`<!doctype html>
       }
 
       function renderOperationCards() {
+        const hasOrganization = Boolean(state.activeOrganizationId);
+        const hasAsset = state.assets.length > 0;
+        const hasWorkOrder = Boolean(activeWorkOrder());
         const cards = [
-          ["Nova OS", "Abrir ordem", "OS", "blue", "work-order"],
-          ["Gerar Orcamento", "Proposta rapida", "$", "green", "budget"],
-          ["Clientes", "Contratos e cadastro", "CL", "purple", "client"],
-          ["Estoque", "Pecas e insumos", "PK", "orange", "admin"],
-          ["Fluxo de Caixa", "Entradas e saidas", "FX", "green", "finance"],
-          ["Financeiro", "Contas e relatorios", "$", "blue", "finance"],
-          ["Assistente IA", "Sugestoes em contexto", "AI", "orange", "ai"],
-          ["Ativos", "Equipamentos", "AT", "blue", "admin"],
-          ["Agenda Tecnica", "Compromissos", "AG", "purple", "orders"],
-          ["Chamados Pendentes", totals().open + " aguardando", "!", "orange", "orders"]
+          { title: "Nova OS", detail: hasAsset ? "Abrir ordem" : "Requer cliente e ativo", icon: "OS", tone: "blue", action: "work-order", enabled: hasOrganization && hasAsset },
+          { title: "Orcamento", detail: hasWorkOrder ? "Preencher proposta" : "Requer OS selecionada", icon: "$", tone: "green", action: "budget", enabled: hasWorkOrder },
+          { title: "Clientes", detail: "Cadastrar cliente", icon: "CL", tone: "purple", action: "client", enabled: true },
+          { title: "Ativos", detail: hasOrganization ? "Cadastrar equipamento" : "Requer cliente", icon: "AT", tone: "blue", action: "admin", enabled: true },
+          { title: "Financeiro", detail: "Calculado por OS aprovada", icon: "$", tone: "blue", action: "finance", enabled: true },
+          { title: "Assistente IA", detail: hasWorkOrder ? "Usar OS selecionada" : "Requer OS selecionada", icon: "AI", tone: "orange", action: "ai", enabled: hasWorkOrder },
+          { title: "Estoque", detail: "Planejado: cadastro de pecas", icon: "PK", tone: "orange", action: "", enabled: false },
+          { title: "Agenda", detail: "Calendario e lembretes", icon: "AG", tone: "purple", action: "agenda", enabled: true },
+          { title: "Chamados", detail: totals().open + " OS abertas", icon: "!", tone: "orange", action: "orders", enabled: true }
         ];
         el("operation-cards").innerHTML = cards.map((card) =>
-          '<button class="op-card ' + card[3] + '" data-quick="' + card[4] + '"><span class="op-icon">' + card[2] + '</span><span><strong>' + card[0] + '</strong><br><span>' + card[1] + '</span></span></button>'
+          '<button class="op-card ' + card.tone + '" ' + (card.action ? 'data-quick="' + card.action + '"' : "") + (card.enabled ? "" : " disabled") + '><span class="op-icon">' + card.icon + '</span><span><strong>' + card.title + '</strong><br><span>' + card.detail + '</span></span></button>'
         ).join("");
       }
 
       function renderSmartSlots() {
         const next = state.workOrders.find((wo) => wo.state !== "closed" && wo.state !== "cancelled");
-        el("smart-slots").innerHTML = [
-          ["OS do dia", next ? next.title : "Nenhuma OS pendente"],
-          ["Rota e check-in", next?.technicianName ? "Tecnico: " + next.technicianName : "Aguardando tecnico"],
-          ["Orcamento rapido", next?.budget ? money(next.budget.amount) : "IA pronta para sugerir"],
-          ["Upload de campo", next ? "Anexe evidencia na OS selecionada" : "Crie uma OS para anexar"]
-        ].map((item) => '<div class="slot"><strong>' + htmlEscape(item[0]) + '</strong><small>' + htmlEscape(item[1]) + '</small></div>').join("");
+        const slots = !state.activeOrganizationId
+          ? [
+              ["1. Cliente", "Cadastre um cliente em Configuracoes."],
+              ["2. Ativo", "Depois cadastre um equipamento para esse cliente."],
+              ["3. OS", "A ordem de servico so abre com ativo selecionado."],
+              ["Rastreio", "Toda OS criada gera evento na timeline enquanto a API estiver ativa."]
+            ]
+          : !state.assets.length
+            ? [
+                ["Cliente ativo", activeOrganization()?.name || "Cliente selecionado"],
+                ["Ativo pendente", "Cadastre um equipamento antes de abrir OS."],
+                ["OS bloqueada", "Sem ativo nao ha ordem rastreavel."],
+                ["Orcamento", "Disponivel somente depois da OS."]
+              ]
+            : [
+                ["OS do dia", next ? next.title : "Nenhuma OS aberta para este cliente."],
+                ["Tecnico", next?.technicianName ? next.technicianName : "Preencha o tecnico ao abrir a OS."],
+                ["Orcamento", next?.budget ? money(next.budget.amount) : next ? "Preencha ou gere rascunho IA." : "Crie uma OS primeiro."],
+                ["Evidencias", next ? "Anexe notas/fotos/documentos na OS." : "Disponivel depois de criar OS."]
+              ];
+        el("smart-slots").innerHTML = slots.map((item) => '<div class="slot"><strong>' + htmlEscape(item[0]) + '</strong><small>' + htmlEscape(item[1]) + '</small></div>').join("");
       }
 
       function renderContextAi() {
         const data = totals();
+        const wo = activeWorkOrder();
         el("context-ai").innerHTML = [
-          ["IA sugere orcamento", "Baseado em servicos similares, tempo e materiais."],
-          ["Atencao operacional", data.open + " OS abertas e " + data.progress + " em andamento."],
-          ["Previsao de caixa", "Resultado previsto: " + money(data.margin) + " no ciclo atual."]
+          ["Orcamento IA", wo ? "Disponivel para a OS selecionada. O resultado vira rascunho editavel." : "Bloqueado: selecione ou crie uma OS."],
+          ["Risco IA", wo ? "Calcula risco usando prioridade, ativo e timeline da OS." : "Bloqueado: a IA precisa de uma timeline."],
+          ["Caixa", data.revenue || data.cost ? "Saldo calculado: " + money(data.margin) : "Sem lancamentos aprovados ainda."]
         ].map((item) => '<div class="ai-card"><strong>' + item[0] + '</strong><p>' + item[1] + '</p></div>').join("");
+      }
+
+      function renderAgenda() {
+        el("agenda-month").value = state.agendaMonth;
+        const [year, month] = state.agendaMonth.split("-").map(Number);
+        const first = new Date(year, month - 1, 1);
+        const start = new Date(first);
+        start.setDate(first.getDate() - first.getDay());
+        const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+        const days = weekdays.map((day) => '<div class="calendar-weekday">' + day + '</div>');
+
+        for (let index = 0; index < 42; index += 1) {
+          const current = new Date(start);
+          current.setDate(start.getDate() + index);
+          const iso = current.toISOString().slice(0, 10);
+          const count = state.appointments.filter((item) => item.scheduledAt.slice(0, 10) === iso).length;
+          const classes = [
+            "calendar-day",
+            current.getMonth() === month - 1 ? "" : "muted",
+            iso === state.agendaDate ? "selected" : "",
+            count > 0 ? "has-items" : ""
+          ].filter(Boolean).join(" ");
+          days.push('<button class="' + classes + '" data-agenda-date="' + iso + '"><span class="day-number">' + current.getDate() + '</span><span class="day-count">' + (count ? count + " agendamento(s)" : "") + '</span></button>');
+        }
+
+        el("agenda-calendar").innerHTML = days.join("");
+        const selected = state.appointments.filter((item) => item.scheduledAt.slice(0, 10) === state.agendaDate);
+        el("agenda-selected-title").textContent = dateLabel(state.agendaDate);
+        el("agenda-day-list").innerHTML = selected.length
+          ? selected.map((item) => '<div class="slot"><strong>' + htmlEscape(dateTimeLabel(item.scheduledAt) + " - " + item.title) + '</strong><small>' + htmlEscape((item.technicianName ? item.technicianName + " · " : "") + (item.location || item.customerName || item.kind)) + '</small><small>' + (item.reminderEnabled ? "Sino: " + item.reminderMinutesBefore + " min antes" : "Sem lembrete") + " · " + htmlEscape(item.status) + '</small></div>').join("")
+          : '<div class="slot"><strong>Nenhum agendamento neste dia.</strong><small>Preencha o formulario para criar um compromisso rastreavel.</small></div>';
+
+        document.querySelectorAll("[data-agenda-date]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.agendaDate = button.getAttribute("data-agenda-date") || state.agendaDate;
+            renderAgenda();
+          });
+        });
       }
 
       function filteredOrders() {
@@ -813,8 +1016,15 @@ const html = String.raw`<!doctype html>
 
       function renderSelectedWorkOrder() {
         const wo = activeWorkOrder();
+        const hasWorkOrder = Boolean(wo);
+        ["attach-evidence", "diagnosis-agent", "budget-agent", "submit-budget", "approve-budget", "start-work", "close-work"].forEach((id) => {
+          el(id).disabled = !hasWorkOrder;
+        });
+        el("work-order-form").querySelector('button[type="submit"]').disabled = !state.activeOrganizationId || !state.assets.length;
         if (!wo) {
-          el("selected-work-order").innerHTML = "Selecione uma OS para operar.";
+          el("selected-work-order").innerHTML = state.assets.length
+            ? "Selecione uma OS ou abra uma nova ordem para liberar evidencia, IA, orcamento e execucao."
+            : "Cadastre cliente e ativo antes de abrir uma OS.";
           el("selected-state").textContent = "Aguardando";
           return;
         }
@@ -875,11 +1085,76 @@ const html = String.raw`<!doctype html>
         if (!state.activeOrganizationId || !state.activeWorkOrderId) throw new Error("Selecione uma OS real antes desta acao.");
       }
 
+      function requireAssetForWorkOrder() {
+        if (!state.activeOrganizationId) throw new Error("Cadastre ou selecione um cliente antes de abrir OS.");
+        if (!el("asset-select").value) throw new Error("Cadastre um ativo/equipamento antes de abrir OS.");
+      }
+
       function navigate(tab) {
         document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
         document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
         el(tab).classList.add("active");
         el("quick-sheet").classList.remove("open");
+      }
+
+      function setupDraggableFab() {
+        const fab = el("fab");
+        const sheet = el("quick-sheet");
+        const margin = 12;
+        let dragging = false;
+        let moved = false;
+        let pointerId = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function clamp(value, min, max) {
+          return Math.min(Math.max(value, min), max);
+        }
+
+        function moveTo(clientX, clientY) {
+          const width = fab.offsetWidth;
+          const height = fab.offsetHeight;
+          const left = clamp(clientX - offsetX, margin, window.innerWidth - width - margin);
+          const top = clamp(clientY - offsetY, margin, window.innerHeight - height - margin);
+          fab.style.left = left + "px";
+          fab.style.top = top + "px";
+          fab.style.right = "auto";
+          fab.style.bottom = "auto";
+        }
+
+        function keepInsideViewport() {
+          if (!fab.style.left || !fab.style.top) return;
+          moveTo(Number.parseFloat(fab.style.left) + offsetX, Number.parseFloat(fab.style.top) + offsetY);
+        }
+
+        fab.addEventListener("pointerdown", (event) => {
+          pointerId = event.pointerId;
+          dragging = true;
+          moved = false;
+          const rect = fab.getBoundingClientRect();
+          offsetX = event.clientX - rect.left;
+          offsetY = event.clientY - rect.top;
+          fab.setPointerCapture(event.pointerId);
+        });
+
+        fab.addEventListener("pointermove", (event) => {
+          if (!dragging || event.pointerId !== pointerId) return;
+          moved = true;
+          sheet.classList.remove("open");
+          moveTo(event.clientX, event.clientY);
+        });
+
+        function finish(event) {
+          if (!dragging || event.pointerId !== pointerId) return;
+          dragging = false;
+          pointerId = null;
+          if (fab.hasPointerCapture(event.pointerId)) fab.releasePointerCapture(event.pointerId);
+          if (!moved) sheet.classList.toggle("open");
+        }
+
+        fab.addEventListener("pointerup", finish);
+        fab.addEventListener("pointercancel", finish);
+        window.addEventListener("resize", keepInsideViewport);
       }
 
       document.addEventListener("click", async (event) => {
@@ -894,6 +1169,7 @@ const html = String.raw`<!doctype html>
           if (action === "client" || action === "admin") navigate("admin");
           if (action === "finance") navigate("finance");
           if (action === "ai") navigate("ai");
+          if (action === "agenda") navigate("agenda");
         }
 
         const agent = event.target.closest("[data-agent]");
@@ -916,9 +1192,19 @@ const html = String.raw`<!doctype html>
         });
       });
 
-      el("fab").addEventListener("click", () => {
-        el("quick-sheet").classList.toggle("open");
+      el("agenda-month").addEventListener("change", (event) => {
+        state.agendaMonth = event.target.value || state.agendaMonth;
+        state.agendaDate = state.agendaMonth + "-01";
+        renderAgenda();
       });
+
+      el("agenda-today").addEventListener("click", () => {
+        state.agendaMonth = todayIso.slice(0, 7);
+        state.agendaDate = todayIso;
+        renderAgenda();
+      });
+
+      setupDraggableFab();
 
       el("organization-select").addEventListener("change", async (event) => {
         state.activeOrganizationId = event.target.value;
@@ -948,6 +1234,7 @@ const html = String.raw`<!doctype html>
 
       el("work-order-form").addEventListener("submit", async (event) => {
         event.preventDefault();
+        requireAssetForWorkOrder();
         const data = Object.fromEntries(new FormData(event.currentTarget).entries());
         const materialName = String(data.materialName || "").trim();
         const payload = {
@@ -968,6 +1255,32 @@ const html = String.raw`<!doctype html>
         state.activeWorkOrderId = created.workOrder.id;
         event.currentTarget.reset();
         await load();
+      });
+
+      el("appointment-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!state.activeOrganizationId) throw new Error("Cadastre ou selecione um cliente antes de agendar.");
+        const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+        const payload = {
+          organizationId: state.activeOrganizationId,
+          title: data.title,
+          scheduledAt: new Date(String(data.scheduledAt)).toISOString(),
+          durationMinutes: asNumber(data.durationMinutes) || 60,
+          kind: data.kind,
+          workOrderId: el("appointment-work-order").value || undefined,
+          technicianName: data.technicianName,
+          customerName: data.customerName,
+          location: data.location,
+          notes: data.notes,
+          reminderEnabled: Boolean(data.reminderEnabled),
+          reminderMinutesBefore: asNumber(data.reminderMinutesBefore) || 30
+        };
+        const created = await call("/field/appointments", { method: "POST", body: JSON.stringify(payload) });
+        state.agendaDate = created.appointment.scheduledAt.slice(0, 10);
+        state.agendaMonth = state.agendaDate.slice(0, 7);
+        event.currentTarget.reset();
+        await load();
+        navigate("agenda");
       });
 
       el("attach-evidence").addEventListener("click", async () => {

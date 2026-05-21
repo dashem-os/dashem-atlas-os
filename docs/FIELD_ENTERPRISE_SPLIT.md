@@ -29,6 +29,10 @@ Do not delete or overwrite either app to implement features in the other.
 - Do not convert Field into Enterprise.
 - Do not merge both navigation models into one primary screen.
 - If a requested change appears to affect both product lines, update shared core first and then adapt both shells explicitly.
+- Field must not present mock data, fake intelligence, simulated finance, or placeholder documents as if they were real.
+- If a capability is not implemented end to end, show it as blocked/planned with the required next field or do not show it in the primary flow.
+- Every Field action should have one of these states: available, requires setup, requires selected OS, or planned.
+- Creation flows must ask for the minimum required fields before sending data to the API.
 
 ## Ports and Scripts
 

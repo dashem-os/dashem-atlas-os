@@ -24,6 +24,8 @@
     "@atlas/module-organizations": "0.1.0",
     "@atlas/module-reports": "0.1.0",
     "@atlas/module-timeline": "0.1.0",
-    "@atlas/module-workflow": "0.1.0"
+    "@atlas/module-workflow": "0.1.0",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.21.0"
   }
 }

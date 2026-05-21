@@ -1,8 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { Pool, type QueryResultRow } from "pg";
 import { InMemoryTenantRepository } from "@atlas/core-database";
 import { createEvent, InMemoryEventBus } from "@atlas/core-events";
 import { Telemetry } from "@atlas/core-observability";
-import { systemClock, type EntityId, type OperationalContext, type OrganizationId, type UserId } from "@atlas/core-shared";
+import { createId, systemClock, type EntityId, type ISODateTime, type OperationalContext, type OrganizationId, type UserId } from "@atlas/core-shared";
 import { archiveAsset, assertAssetTenant, registerAsset, updateAsset, type Asset } from "@atlas/module-assets";
 import { registerUser } from "@atlas/module-auth";
 import {
@@ -21,7 +22,8 @@ import {
   attachPhotoTitle,
   bindTimelineProjection,
   createBootstrapTimeline,
-  InMemoryTimelineRepository,
+  type TimelineEntry,
+  type TimelineRepository,
   type AddTimelineEntryCommand
 } from "@atlas/module-timeline";
 import {
@@ -64,16 +66,149 @@ import {
   type OperationalSpecialist
 } from "@atlas/module-operations";
 
+const localPostgresUrl = "postgresql://atlas:atlas_dev@localhost:55432/atlas_os";
+const configuredDatabaseUrl = process.env.DATABASE_URL ?? process.env.ATLAS_DATABASE_URL;
+const databaseUrl = configuredDatabaseUrl?.startsWith("postgres") ? configuredDatabaseUrl : localPostgresUrl;
+const pgPool = new Pool({ connectionString: databaseUrl });
+
+function json<T>(value: T): string {
+  return JSON.stringify(value);
+}
+
+function fromJson<T>(value: unknown): T {
+  return (typeof value === "string" ? JSON.parse(value) : value) as T;
+}
+
+async function migratePostgres(): Promise<void> {
+  await pgPool.query(`
+    alter table organizations add column if not exists type text;
+    alter table organizations add column if not exists monthly_contract_value numeric;
+    alter table organizations add column if not exists target_sla numeric;
+    alter table organizations add column if not exists data jsonb not null default '{}'::jsonb;
+
+    alter table assets add column if not exists data jsonb not null default '{}'::jsonb;
+
+    alter table work_orders add column if not exists technician_name text;
+    alter table work_orders add column if not exists diagnosis text;
+    alter table work_orders add column if not exists materials jsonb not null default '[]'::jsonb;
+    alter table work_orders add column if not exists labor_hours numeric;
+    alter table work_orders add column if not exists labor_rate numeric;
+    alter table work_orders add column if not exists labor_cost numeric;
+    alter table work_orders add column if not exists estimated_duration_hours numeric;
+    alter table work_orders add column if not exists checklist jsonb not null default '[]'::jsonb;
+    alter table work_orders add column if not exists evidence jsonb not null default '[]'::jsonb;
+    alter table work_orders add column if not exists data jsonb not null default '{}'::jsonb;
+
+    create table if not exists field_appointments (
+      id text primary key,
+      organization_id text not null references organizations(id),
+      title text not null,
+      scheduled_at timestamptz not null,
+      duration_minutes integer not null,
+      status text not null,
+      kind text not null,
+      technician_name text,
+      customer_name text,
+      location text,
+      work_order_id text,
+      notes text,
+      reminder_enabled boolean not null default false,
+      reminder_minutes_before integer,
+      reminder_at timestamptz,
+      data jsonb not null default '{}'::jsonb,
+      created_at timestamptz not null,
+      updated_at timestamptz not null
+    );
+
+    create index if not exists field_appointments_org_date_idx
+      on field_appointments (organization_id, scheduled_at);
+  `);
+}
+
+class PostgresTimelineRepository implements TimelineRepository {
+  constructor(private readonly pool: Pool) {}
+
+  async append(entry: TimelineEntry): Promise<TimelineEntry> {
+    await this.pool.query(
+      `insert into timeline_entries (id, organization_id, subject_id, occurred_at, actor_id, source_module, event_name, kind, title, body, metadata)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       on conflict (id) do nothing`,
+      [
+        entry.id,
+        entry.organizationId,
+        entry.subjectId,
+        entry.occurredAt,
+        entry.actorId ?? null,
+        entry.sourceModule,
+        entry.eventName,
+        entry.kind,
+        entry.title,
+        entry.body ?? null,
+        json(entry.metadata)
+      ]
+    );
+    return entry;
+  }
+
+  async list(query: { organizationId: OrganizationId; subjectId?: EntityId; limit?: number }): Promise<readonly TimelineEntry[]> {
+    const values: unknown[] = [query.organizationId];
+    let where = "organization_id = $1";
+    if (query.subjectId) {
+      values.push(query.subjectId);
+      where += ` and subject_id = $${values.length}`;
+    }
+    values.push(query.limit ?? 100);
+    const result = await this.pool.query(
+      `select * from timeline_entries where ${where} order by occurred_at desc limit $${values.length}`,
+      values
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      organizationId: row.organization_id,
+      subjectId: row.subject_id,
+      occurredAt: new Date(row.occurred_at).toISOString() as ISODateTime,
+      sourceModule: row.source_module,
+      eventName: row.event_name,
+      kind: row.kind,
+      title: row.title,
+      metadata: fromJson<Record<string, unknown>>(row.metadata ?? {}),
+      ...(row.actor_id ? { actorId: row.actor_id } : {}),
+      ...(row.body ? { body: row.body } : {})
+    }));
+  }
+}
+
 const port = Number(process.env.ATLAS_API_PORT ?? 4000);
 const environment = process.env.ATLAS_ENV === "production" ? "production" : "development";
 
 const bus = new InMemoryEventBus();
 const telemetry = new Telemetry();
-const timeline = new InMemoryTimelineRepository();
+const timeline = new PostgresTimelineRepository(pgPool);
 const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
 const organizations = new Map<OrganizationId, Organization>();
 const reports = new Map<string, TechnicalReportVersion[]>();
+type AppointmentStatus = "scheduled" | "done" | "cancelled";
+interface FieldAppointment {
+  readonly id: EntityId;
+  readonly organizationId: OrganizationId;
+  readonly title: string;
+  readonly scheduledAt: ISODateTime;
+  readonly durationMinutes: number;
+  readonly status: AppointmentStatus;
+  readonly kind: "visit" | "call" | "follow_up" | "administrative";
+  readonly technicianName?: string;
+  readonly customerName?: string;
+  readonly location?: string;
+  readonly workOrderId?: EntityId;
+  readonly notes?: string;
+  readonly reminderEnabled: boolean;
+  readonly reminderMinutesBefore?: number;
+  readonly reminderAt?: ISODateTime;
+  readonly createdAt: ISODateTime;
+  readonly updatedAt: ISODateTime;
+}
+const appointments = new Map<EntityId, FieldAppointment>();
 const knowledgeGraph = new JsonKnowledgeGraphRepository();
 const digitalTwin = new JsonDigitalTwinRepository();
 const cognitiveHistory = new JsonCognitiveWorkflowHistoryRepository();
@@ -88,6 +223,22 @@ bus.subscribeAll((event) => {
   telemetry.increment(`events.${event.name}`);
   operationalFeed.unshift(event);
   operationalFeed.splice(200);
+});
+
+bus.subscribeAll(async (event) => {
+  await pgPool.query(
+    `insert into event_store (id, organization_id, name, occurred_at, payload, context)
+     values ($1,$2,$3,$4,$5,$6)
+     on conflict (id) do nothing`,
+    [
+      event.id,
+      event.metadata.organizationId ?? null,
+      event.name,
+      event.occurredAt,
+      json(event.payload),
+      json({ ...event.context, metadata: event.metadata })
+    ]
+  );
 });
 
 bus.subscribeAll(async (event) => {
@@ -195,11 +346,11 @@ function organizationFrom(url: URL, request: IncomingMessage): OrganizationId | 
 }
 
 async function findAssetOrThrow(id: EntityId, organizationId: OrganizationId): Promise<Asset> {
-  return assertAssetTenant(await assets.findById(id), organizationId, id);
+  return assertAssetTenant(await findAssetRecord(id), organizationId, id);
 }
 
 async function findWorkOrderOrThrow(id: EntityId, organizationId: OrganizationId): Promise<WorkOrder> {
-  return assertWorkOrderTenant(await workOrders.findById(id), organizationId, id);
+  return assertWorkOrderTenant(await findWorkOrderRecord(id), organizationId, id);
 }
 
 async function buildAiMemory(workOrderId: EntityId, organizationId: OrganizationId): Promise<AiWorkOrderMemory> {
@@ -293,6 +444,228 @@ function saveReportVersion(report: TechnicalReportVersion): void {
   reports.set(key, next.sort((a, b) => b.version - a.version));
 }
 
+async function saveOrganizationRecord(organization: Organization): Promise<void> {
+  organizations.set(organization.id, organization);
+  await pgPool.query(
+    `insert into organizations (id, name, slug, status, type, monthly_contract_value, target_sla, created_at, updated_at, data)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     on conflict (id) do update set
+       name = excluded.name,
+       slug = excluded.slug,
+       status = excluded.status,
+       type = excluded.type,
+       monthly_contract_value = excluded.monthly_contract_value,
+       target_sla = excluded.target_sla,
+       updated_at = excluded.updated_at,
+       data = excluded.data`,
+    [
+      organization.id,
+      organization.name,
+      organization.slug,
+      organization.status,
+      organization.type ?? null,
+      organization.monthlyContractValue ?? null,
+      organization.targetSla ?? null,
+      organization.createdAt,
+      organization.updatedAt,
+      json(organization)
+    ]
+  );
+}
+
+async function listOrganizationRecords(): Promise<Organization[]> {
+  const result = await pgPool.query("select data from organizations order by created_at desc");
+  return result.rows.map((row) => fromJson<Organization>(row.data));
+}
+
+async function saveAssetRecord(asset: Asset): Promise<void> {
+  await assets.save(asset);
+  await pgPool.query(
+    `insert into assets (id, organization_id, name, kind, criticality, location, description, status, created_at, updated_at, data)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     on conflict (id) do update set
+       name = excluded.name,
+       kind = excluded.kind,
+       criticality = excluded.criticality,
+       location = excluded.location,
+       description = excluded.description,
+       status = excluded.status,
+       updated_at = excluded.updated_at,
+       data = excluded.data`,
+    [
+      asset.id,
+      asset.organizationId,
+      asset.name,
+      asset.kind,
+      asset.criticality,
+      asset.location ?? null,
+      asset.description ?? null,
+      asset.status,
+      asset.createdAt,
+      asset.updatedAt,
+      json(asset)
+    ]
+  );
+}
+
+async function findAssetRecord(id: EntityId): Promise<Asset | null> {
+  const cached = await assets.findById(id);
+  if (cached) return cached;
+  const result = await pgPool.query("select data from assets where id = $1", [id]);
+  const asset = result.rows[0] ? fromJson<Asset>(result.rows[0].data) : null;
+  if (asset) await assets.save(asset);
+  return asset;
+}
+
+async function listAssetRecords(organizationId?: OrganizationId) {
+  const result = organizationId
+    ? await pgPool.query("select data from assets where organization_id = $1 order by updated_at desc", [organizationId])
+    : await pgPool.query("select data from assets order by updated_at desc");
+  return { items: result.rows.map((row) => fromJson<Asset>(row.data)) };
+}
+
+async function saveWorkOrderRecord(workOrder: WorkOrder): Promise<void> {
+  await workOrders.save(workOrder);
+  await pgPool.query(
+    `insert into work_orders (
+       id, organization_id, asset_id, title, description, priority, state, due_at, budget, status, closed_at,
+       technician_name, diagnosis, materials, labor_hours, labor_rate, labor_cost, estimated_duration_hours, checklist, evidence,
+       created_at, updated_at, data
+     )
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+     on conflict (id) do update set
+       title = excluded.title,
+       description = excluded.description,
+       priority = excluded.priority,
+       state = excluded.state,
+       due_at = excluded.due_at,
+       budget = excluded.budget,
+       status = excluded.status,
+       closed_at = excluded.closed_at,
+       technician_name = excluded.technician_name,
+       diagnosis = excluded.diagnosis,
+       materials = excluded.materials,
+       labor_hours = excluded.labor_hours,
+       labor_rate = excluded.labor_rate,
+       labor_cost = excluded.labor_cost,
+       estimated_duration_hours = excluded.estimated_duration_hours,
+       checklist = excluded.checklist,
+       evidence = excluded.evidence,
+       updated_at = excluded.updated_at,
+       data = excluded.data`,
+    [
+      workOrder.id,
+      workOrder.organizationId,
+      workOrder.assetId,
+      workOrder.title,
+      workOrder.description ?? null,
+      workOrder.priority,
+      workOrder.state,
+      workOrder.dueAt ?? null,
+      workOrder.budget ? json(workOrder.budget) : null,
+      workOrder.status,
+      workOrder.closedAt ?? null,
+      workOrder.technicianName ?? null,
+      workOrder.diagnosis ?? null,
+      json(workOrder.materials),
+      workOrder.laborHours ?? null,
+      workOrder.laborRate ?? null,
+      workOrder.laborCost ?? null,
+      workOrder.estimatedDurationHours ?? null,
+      json(workOrder.checklist),
+      json(workOrder.evidence),
+      workOrder.createdAt,
+      workOrder.updatedAt,
+      json(workOrder)
+    ]
+  );
+}
+
+async function findWorkOrderRecord(id: EntityId): Promise<WorkOrder | null> {
+  const cached = await workOrders.findById(id);
+  if (cached) return cached;
+  const result = await pgPool.query("select data from work_orders where id = $1", [id]);
+  const workOrder = result.rows[0] ? fromJson<WorkOrder>(result.rows[0].data) : null;
+  if (workOrder) await workOrders.save(workOrder);
+  return workOrder;
+}
+
+async function listWorkOrderRecords(organizationId: OrganizationId) {
+  const result = await pgPool.query("select data from work_orders where organization_id = $1 order by updated_at desc", [organizationId]);
+  return { items: result.rows.map((row) => fromJson<WorkOrder>(row.data)) };
+}
+
+async function saveAppointmentRecord(appointment: FieldAppointment): Promise<void> {
+  appointments.set(appointment.id, appointment);
+  await pgPool.query(
+    `insert into field_appointments (
+       id, organization_id, title, scheduled_at, duration_minutes, status, kind, technician_name, customer_name,
+       location, work_order_id, notes, reminder_enabled, reminder_minutes_before, reminder_at, data, created_at, updated_at
+     )
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     on conflict (id) do update set
+       title = excluded.title,
+       scheduled_at = excluded.scheduled_at,
+       duration_minutes = excluded.duration_minutes,
+       status = excluded.status,
+       kind = excluded.kind,
+       technician_name = excluded.technician_name,
+       customer_name = excluded.customer_name,
+       location = excluded.location,
+       work_order_id = excluded.work_order_id,
+       notes = excluded.notes,
+       reminder_enabled = excluded.reminder_enabled,
+       reminder_minutes_before = excluded.reminder_minutes_before,
+       reminder_at = excluded.reminder_at,
+       data = excluded.data,
+       updated_at = excluded.updated_at`,
+    [
+      appointment.id,
+      appointment.organizationId,
+      appointment.title,
+      appointment.scheduledAt,
+      appointment.durationMinutes,
+      appointment.status,
+      appointment.kind,
+      appointment.technicianName ?? null,
+      appointment.customerName ?? null,
+      appointment.location ?? null,
+      appointment.workOrderId ?? null,
+      appointment.notes ?? null,
+      appointment.reminderEnabled,
+      appointment.reminderMinutesBefore ?? null,
+      appointment.reminderAt ?? null,
+      json(appointment),
+      appointment.createdAt,
+      appointment.updatedAt
+    ]
+  );
+}
+
+async function listAppointmentRecords(organizationId: OrganizationId, from?: string | null, to?: string | null): Promise<FieldAppointment[]> {
+  const values: unknown[] = [organizationId];
+  let where = "organization_id = $1";
+  if (from) {
+    values.push(from);
+    where += ` and scheduled_at >= $${values.length}`;
+  }
+  if (to) {
+    values.push(to);
+    where += ` and scheduled_at <= $${values.length}`;
+  }
+  const result = await pgPool.query(`select data from field_appointments where ${where} order by scheduled_at asc`, values);
+  return result.rows.map((row) => fromJson<FieldAppointment>(row.data));
+}
+
+async function findAppointmentRecord(id: EntityId): Promise<FieldAppointment | null> {
+  const cached = appointments.get(id);
+  if (cached) return cached;
+  const result = await pgPool.query("select data from field_appointments where id = $1", [id]);
+  const appointment = result.rows[0] ? fromJson<FieldAppointment>(result.rows[0].data) : null;
+  if (appointment) appointments.set(appointment.id, appointment);
+  return appointment;
+}
+
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -376,15 +749,139 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/field/appointments") {
+      const organizationId = organizationFrom(url, request);
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      if (request.method === "GET") {
+        const from = url.searchParams.get("from");
+        const to = url.searchParams.get("to");
+        const items = await listAppointmentRecords(organizationId, from, to);
+        send(response, 200, { items });
+        return;
+      }
+
+      if (request.method === "POST") {
+        const payload = await readJson<{
+          title: string;
+          scheduledAt: ISODateTime;
+          durationMinutes?: number;
+          kind?: FieldAppointment["kind"];
+          technicianName?: string;
+          customerName?: string;
+          location?: string;
+          workOrderId?: EntityId;
+          notes?: string;
+          reminderEnabled?: boolean;
+          reminderMinutesBefore?: number;
+        }>(request);
+        const now = systemClock.now();
+        const reminderEnabled = Boolean(payload.reminderEnabled);
+        const reminderMinutesBefore = payload.reminderMinutesBefore ?? 30;
+        const reminderAt = reminderEnabled
+          ? (new Date(new Date(payload.scheduledAt).getTime() - reminderMinutesBefore * 60_000).toISOString() as ISODateTime)
+          : undefined;
+        const appointment: FieldAppointment = {
+          id: createId("apt"),
+          organizationId,
+          title: payload.title.trim(),
+          scheduledAt: payload.scheduledAt,
+          durationMinutes: payload.durationMinutes ?? 60,
+          kind: payload.kind ?? "visit",
+          status: "scheduled",
+          reminderEnabled,
+          createdAt: now,
+          updatedAt: now,
+          ...(payload.technicianName?.trim() ? { technicianName: payload.technicianName.trim() } : {}),
+          ...(payload.customerName?.trim() ? { customerName: payload.customerName.trim() } : {}),
+          ...(payload.location?.trim() ? { location: payload.location.trim() } : {}),
+          ...(payload.workOrderId ? { workOrderId: payload.workOrderId } : {}),
+          ...(payload.notes?.trim() ? { notes: payload.notes.trim() } : {}),
+          ...(reminderEnabled && reminderAt ? { reminderMinutesBefore, reminderAt } : {})
+        };
+        await saveAppointmentRecord(appointment);
+        await bus.publish(
+          createEvent(
+            "AgendaAppointmentScheduled",
+            {
+              title: "Agendamento criado",
+              body: `${appointment.title} em ${appointment.scheduledAt}`,
+              kind: "system",
+              appointmentId: appointment.id,
+              organizationId,
+              subjectId: appointment.workOrderId ?? appointment.id,
+              metadata: {
+                scheduledAt: appointment.scheduledAt,
+                durationMinutes: appointment.durationMinutes,
+                appointmentKind: appointment.kind,
+                reminderEnabled: appointment.reminderEnabled,
+                reminderAt: appointment.reminderAt,
+                workOrderId: appointment.workOrderId
+              }
+            },
+            context(request, organizationId),
+            { organizationId, subjectId: appointment.workOrderId ?? appointment.id, sourceModule: "operations" }
+          )
+        );
+        send(response, 201, { appointment, timeline: await timeline.list({ organizationId, subjectId: appointment.workOrderId ?? appointment.id }) });
+        return;
+      }
+    }
+
+    const appointmentMatch = url.pathname.match(/^\/field\/appointments\/([^/]+)$/);
+    if (appointmentMatch) {
+      const organizationId = organizationFrom(url, request);
+      const appointmentId = appointmentMatch[1] as EntityId;
+
+      if (!organizationId) {
+        send(response, 400, { error: "organization_required", message: "organizationId is required." });
+        return;
+      }
+
+      const appointment = await findAppointmentRecord(appointmentId);
+      if (!appointment || appointment.organizationId !== organizationId) {
+        send(response, 404, { error: "appointment_not_found", message: "Appointment not found." });
+        return;
+      }
+
+      if (request.method === "PATCH") {
+        const payload = await readJson<{ status?: AppointmentStatus }>(request);
+        const updated: FieldAppointment = { ...appointment, ...(payload.status ? { status: payload.status } : {}), updatedAt: systemClock.now() };
+        await saveAppointmentRecord(updated);
+        await bus.publish(
+          createEvent(
+            "AgendaAppointmentUpdated",
+            {
+              title: "Agendamento atualizado",
+              body: `${updated.title} - ${updated.status}`,
+              kind: "system",
+              appointmentId: updated.id,
+              organizationId,
+              subjectId: updated.workOrderId ?? updated.id,
+              metadata: { status: updated.status, scheduledAt: updated.scheduledAt, workOrderId: updated.workOrderId }
+            },
+            context(request, organizationId),
+            { organizationId, subjectId: updated.workOrderId ?? updated.id, sourceModule: "operations" }
+          )
+        );
+        send(response, 200, { appointment: updated, timeline: await timeline.list({ organizationId, subjectId: updated.workOrderId ?? updated.id }) });
+        return;
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/organizations") {
-      send(response, 200, { items: Array.from(organizations.values()) });
+      send(response, 200, { items: await listOrganizationRecords() });
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/organizations") {
       const payload = await readJson<{ name: string; slug: string; type?: "corporate" | "private"; monthlyContractValue?: number; targetSla?: number }>(request);
       const organization = await createOrganization(payload, context(request), bus);
-      organizations.set(organization.id, organization);
+      await saveOrganizationRecord(organization);
       send(response, 201, { organization });
       return;
     }
@@ -399,14 +896,14 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/assets") {
       const payload = await readJson<Parameters<typeof registerAsset>[0]>(request);
       const asset = await registerAsset(payload, context(request, payload.organizationId), bus);
-      await assets.save(asset);
+      await saveAssetRecord(asset);
       send(response, 201, { asset });
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/assets") {
       const organizationId = url.searchParams.get("organizationId") as OrganizationId | null;
-      const page = organizationId ? await assets.listByOrganization(organizationId) : await assets.list();
+      const page = await listAssetRecords(organizationId ?? undefined);
       send(response, 200, page);
       return;
     }
@@ -430,7 +927,7 @@ const server = createServer(async (request, response) => {
         const payload = await readJson<Parameters<typeof updateAsset>[1]>(request);
         const asset = await findAssetOrThrow(assetId, organizationId);
         const updated = await updateAsset(asset, payload, context(request, organizationId), bus);
-        await assets.save(updated);
+        await saveAssetRecord(updated);
         send(response, 200, { asset: updated });
         return;
       }
@@ -438,7 +935,7 @@ const server = createServer(async (request, response) => {
       if (request.method === "DELETE") {
         const asset = await findAssetOrThrow(assetId, organizationId);
         const archived = await archiveAsset(asset, context(request, organizationId), bus);
-        await assets.save(archived);
+        await saveAssetRecord(archived);
         send(response, 200, { asset: archived });
         return;
       }
@@ -447,7 +944,7 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/maintenance/work-orders") {
       const payload = await readJson<Parameters<typeof createWorkOrder>[0]>(request);
       const workOrder = await createWorkOrder(payload, context(request, payload.organizationId), bus);
-      await workOrders.save(workOrder);
+      await saveWorkOrderRecord(workOrder);
       send(response, 201, { workOrder, timeline: await timeline.list({ organizationId: workOrder.organizationId, subjectId: workOrder.id }) });
       return;
     }
@@ -460,7 +957,7 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      send(response, 200, await workOrders.listByOrganization(organizationId));
+      send(response, 200, await listWorkOrderRecords(organizationId));
       return;
     }
 
@@ -491,7 +988,7 @@ const server = createServer(async (request, response) => {
           ...payload,
           updatedAt: systemClock.now()
         };
-        await workOrders.save(updated);
+        await saveWorkOrderRecord(updated);
         send(response, 200, {
           workOrder: updated,
           timeline: await timeline.list({ organizationId, subjectId: workOrder.id })
@@ -506,7 +1003,7 @@ const server = createServer(async (request, response) => {
       const workOrderId = statusMatch[1] as EntityId;
       const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
       const updated = await changeWorkOrderStatus(workOrder, payload, context(request, payload.organizationId), bus);
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 200, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
@@ -531,7 +1028,7 @@ const server = createServer(async (request, response) => {
       const workOrderId = evidenceMatch[1] as EntityId;
       const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
       const updated = await attachEvidence(workOrder, payload, context(request, payload.organizationId), bus);
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
@@ -542,7 +1039,7 @@ const server = createServer(async (request, response) => {
       const workOrderId = evidenceUploadMatch[1] as EntityId;
       const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
       const updated = await uploadEvidence(workOrder, payload, context(request, payload.organizationId), bus);
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 201, {
         evidence: updated.evidence[updated.evidence.length - 1],
         gallery: updated.evidence,
@@ -563,7 +1060,7 @@ const server = createServer(async (request, response) => {
         context(request, payload.organizationId),
         bus
       );
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 200, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
@@ -603,7 +1100,7 @@ const server = createServer(async (request, response) => {
       const workOrderId = budgetMatch[1] as EntityId;
       const workOrder = await findWorkOrderOrThrow(workOrderId, payload.organizationId);
       const updated = await submitBudget(workOrder, payload, context(request, payload.organizationId), bus);
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
@@ -660,7 +1157,7 @@ const server = createServer(async (request, response) => {
         context(request, payload.organizationId),
         bus
       );
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 201, { workOrder: updated, timeline: await timeline.list({ organizationId: updated.organizationId, subjectId: updated.id }) });
       return;
     }
@@ -833,7 +1330,7 @@ const server = createServer(async (request, response) => {
             ? await changeWorkOrderStatus(workOrder, { state: "rejected" }, context(request, payload.organizationId), bus)
             : workOrder;
 
-      await workOrders.save(updated);
+      await saveWorkOrderRecord(updated);
       send(response, 201, {
         approval,
         workOrder: updated,
@@ -1125,6 +1622,9 @@ const server = createServer(async (request, response) => {
   }
 });
 
+await migratePostgres();
+
 server.listen(port, () => {
   console.log(`Atlas API listening on http://localhost:${port}`);
+  console.log(`Atlas API persistence connected to ${databaseUrl}`);
 });
