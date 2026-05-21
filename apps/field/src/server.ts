@@ -1259,7 +1259,11 @@ const html = String.raw`<!doctype html>
 
       el("appointment-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!state.activeOrganizationId) throw new Error("Cadastre ou selecione um cliente antes de agendar.");
+        if (!state.activeOrganizationId) {
+          window.alert("Cadastre um cliente antes de criar agendamentos.");
+          navigate("admin");
+          return;
+        }
         const data = Object.fromEntries(new FormData(event.currentTarget).entries());
         const payload = {
           organizationId: state.activeOrganizationId,
@@ -1275,7 +1279,7 @@ const html = String.raw`<!doctype html>
           reminderEnabled: Boolean(data.reminderEnabled),
           reminderMinutesBefore: asNumber(data.reminderMinutesBefore) || 30
         };
-        const created = await call("/field/appointments", { method: "POST", body: JSON.stringify(payload) });
+        const created = await call("/field/appointments?organizationId=" + encodeURIComponent(state.activeOrganizationId), { method: "POST", body: JSON.stringify(payload) });
         state.agendaDate = created.appointment.scheduledAt.slice(0, 10);
         state.agendaMonth = state.agendaDate.slice(0, 7);
         event.currentTarget.reset();

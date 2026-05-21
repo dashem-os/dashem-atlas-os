@@ -752,12 +752,11 @@ const server = createServer(async (request, response) => {
     if (url.pathname === "/field/appointments") {
       const organizationId = organizationFrom(url, request);
 
-      if (!organizationId) {
-        send(response, 400, { error: "organization_required", message: "organizationId is required." });
-        return;
-      }
-
       if (request.method === "GET") {
+        if (!organizationId) {
+          send(response, 400, { error: "organization_required", message: "organizationId is required." });
+          return;
+        }
         const from = url.searchParams.get("from");
         const to = url.searchParams.get("to");
         const items = await listAppointmentRecords(organizationId, from, to);
@@ -778,7 +777,13 @@ const server = createServer(async (request, response) => {
           notes?: string;
           reminderEnabled?: boolean;
           reminderMinutesBefore?: number;
+          organizationId?: OrganizationId;
         }>(request);
+        const payloadOrganizationId = organizationId ?? payload.organizationId;
+        if (!payloadOrganizationId) {
+          send(response, 400, { error: "organization_required", message: "organizationId is required." });
+          return;
+        }
         const now = systemClock.now();
         const reminderEnabled = Boolean(payload.reminderEnabled);
         const reminderMinutesBefore = payload.reminderMinutesBefore ?? 30;
@@ -787,7 +792,7 @@ const server = createServer(async (request, response) => {
           : undefined;
         const appointment: FieldAppointment = {
           id: createId("apt"),
-          organizationId,
+          organizationId: payloadOrganizationId,
           title: payload.title.trim(),
           scheduledAt: payload.scheduledAt,
           durationMinutes: payload.durationMinutes ?? 60,
@@ -812,7 +817,7 @@ const server = createServer(async (request, response) => {
               body: `${appointment.title} em ${appointment.scheduledAt}`,
               kind: "system",
               appointmentId: appointment.id,
-              organizationId,
+              organizationId: payloadOrganizationId,
               subjectId: appointment.workOrderId ?? appointment.id,
               metadata: {
                 scheduledAt: appointment.scheduledAt,
@@ -823,11 +828,11 @@ const server = createServer(async (request, response) => {
                 workOrderId: appointment.workOrderId
               }
             },
-            context(request, organizationId),
-            { organizationId, subjectId: appointment.workOrderId ?? appointment.id, sourceModule: "operations" }
+            context(request, payloadOrganizationId),
+            { organizationId: payloadOrganizationId, subjectId: appointment.workOrderId ?? appointment.id, sourceModule: "operations" }
           )
         );
-        send(response, 201, { appointment, timeline: await timeline.list({ organizationId, subjectId: appointment.workOrderId ?? appointment.id }) });
+        send(response, 201, { appointment, timeline: await timeline.list({ organizationId: payloadOrganizationId, subjectId: appointment.workOrderId ?? appointment.id }) });
         return;
       }
     }
