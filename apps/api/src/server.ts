@@ -79,12 +79,69 @@ function fromJson<T>(value: unknown): T {
   return (typeof value === "string" ? JSON.parse(value) : value) as T;
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
 async function migratePostgres(): Promise<void> {
   await pgPool.query(`
     alter table organizations add column if not exists type text;
     alter table organizations add column if not exists monthly_contract_value numeric;
     alter table organizations add column if not exists target_sla numeric;
     alter table organizations add column if not exists data jsonb not null default '{}'::jsonb;
+
+    create table if not exists atlas_tenants (
+      id text primary key,
+      code text not null unique,
+      name text not null,
+      product_line text not null,
+      plan text not null,
+      status text not null,
+      owner_name text,
+      owner_email text,
+      access_scope text not null,
+      created_at timestamptz not null,
+      updated_at timestamptz not null,
+      slug text,
+      permissions jsonb not null default '[]'::jsonb,
+      allowed_apps jsonb not null default '[]'::jsonb,
+      data jsonb not null default '{}'::jsonb
+    );
+
+    alter table atlas_tenants add column if not exists slug text;
+    alter table atlas_tenants add column if not exists permissions jsonb not null default '[]'::jsonb;
+    alter table atlas_tenants add column if not exists allowed_apps jsonb not null default '[]'::jsonb;
+
+    create unique index if not exists atlas_tenants_slug_idx
+      on atlas_tenants (slug)
+      where slug is not null;
+
+    create table if not exists atlas_access_grants (
+      id text primary key,
+      tenant_id text not null references atlas_tenants(id),
+      tenant_code text not null,
+      name text not null,
+      email text not null,
+      role text not null,
+      status text not null,
+      permissions jsonb not null default '[]'::jsonb,
+      created_at timestamptz not null,
+      updated_at timestamptz not null,
+      last_login_at timestamptz,
+      data jsonb not null default '{}'::jsonb
+    );
+
+    create index if not exists atlas_access_grants_tenant_idx
+      on atlas_access_grants (tenant_id);
+
+    create unique index if not exists atlas_access_grants_email_tenant_idx
+      on atlas_access_grants (tenant_id, email);
 
     alter table assets add column if not exists data jsonb not null default '{}'::jsonb;
 
@@ -97,6 +154,7 @@ async function migratePostgres(): Promise<void> {
     alter table work_orders add column if not exists estimated_duration_hours numeric;
     alter table work_orders add column if not exists checklist jsonb not null default '[]'::jsonb;
     alter table work_orders add column if not exists evidence jsonb not null default '[]'::jsonb;
+    alter table work_orders add column if not exists sequence_number text;
     alter table work_orders add column if not exists data jsonb not null default '{}'::jsonb;
 
     create table if not exists field_appointments (
@@ -122,6 +180,41 @@ async function migratePostgres(): Promise<void> {
 
     create index if not exists field_appointments_org_date_idx
       on field_appointments (organization_id, scheduled_at);
+
+    drop table if exists field_profile cascade;
+
+    insert into atlas_tenants (id, code, name, product_line, plan, status, owner_name, owner_email, access_scope, created_at, updated_at, data)
+    values
+      ('tn_field_00', '#00', 'Field #00', 'field', 'field_solo', 'active', 'Marcelo Atlas', 'marcelo@dashem.com', 'tenant', now(), now(), '{"kind":"test_field_tenant","seed_personal_data_removed":true}'::jsonb)
+    on conflict (code) do update set
+      name = excluded.name,
+      owner_name = excluded.owner_name,
+      owner_email = excluded.owner_email,
+      slug = coalesce(atlas_tenants.slug, 'field-00'),
+      permissions = case when atlas_tenants.permissions = '[]'::jsonb then '["field:access","field:work_orders","field:customers","field:assets","field:appointments","ai:invoke"]'::jsonb else atlas_tenants.permissions end,
+      allowed_apps = case when atlas_tenants.allowed_apps = '[]'::jsonb then '["field"]'::jsonb else atlas_tenants.allowed_apps end;
+
+    insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at)
+    values (
+      'ag_field_00_marcelo',
+      'tn_field_00',
+      '#00',
+      'Marcelo Atlas',
+      'marcelo@dashem.com',
+      'technician',
+      'active',
+      '["field:access","field:work_orders","field:customers","field:assets","field:appointments","ai:invoke"]'::jsonb,
+      now(),
+      now()
+    )
+    on conflict (id) do update set
+      name = excluded.name,
+      email = excluded.email,
+      role = excluded.role,
+      status = excluded.status;
+
+    delete from atlas_access_grants where tenant_id = 'tn_owner_dashem' or tenant_code = 'OWNER';
+    delete from atlas_tenants where id = 'tn_owner_dashem' or code = 'OWNER' or product_line = 'owner';
   `);
 }
 
@@ -188,6 +281,38 @@ const assets = new InMemoryTenantRepository<Asset>();
 const workOrders = new InMemoryTenantRepository<WorkOrder>();
 const organizations = new Map<OrganizationId, Organization>();
 const reports = new Map<string, TechnicalReportVersion[]>();
+type TenantProductLine = "field" | "enterprise";
+interface AtlasTenant {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly productLine: TenantProductLine;
+  readonly plan: string;
+  readonly status: "active" | "trial" | "suspended" | "archived";
+  readonly ownerName?: string;
+  readonly ownerEmail?: string;
+  readonly accessScope: "global" | "tenant";
+  readonly slug?: string;
+  readonly permissions: readonly string[];
+  readonly allowedApps: readonly string[];
+  readonly createdAt: ISODateTime;
+  readonly updatedAt: ISODateTime;
+  readonly data: Record<string, unknown>;
+}
+interface AtlasAccessGrant {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly tenantCode: string;
+  readonly name: string;
+  readonly email: string;
+  readonly role: "owner" | "admin" | "manager" | "technician" | "viewer";
+  readonly status: "invited" | "active" | "suspended";
+  readonly permissions: readonly string[];
+  readonly createdAt: ISODateTime;
+  readonly updatedAt: ISODateTime;
+  readonly lastLoginAt?: ISODateTime;
+  readonly data: Record<string, unknown>;
+}
 type AppointmentStatus = "scheduled" | "done" | "cancelled";
 interface FieldAppointment {
   readonly id: EntityId;
@@ -205,6 +330,7 @@ interface FieldAppointment {
   readonly reminderEnabled: boolean;
   readonly reminderMinutesBefore?: number;
   readonly reminderAt?: ISODateTime;
+  readonly pinned?: boolean;
   readonly createdAt: ISODateTime;
   readonly updatedAt: ISODateTime;
 }
@@ -478,6 +604,146 @@ async function listOrganizationRecords(): Promise<Organization[]> {
   return result.rows.map((row) => fromJson<Organization>(row.data));
 }
 
+function tenantFromRow(row: QueryResultRow): AtlasTenant {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    productLine: row.product_line as TenantProductLine,
+    plan: row.plan,
+    status: row.status as AtlasTenant["status"],
+    accessScope: row.access_scope as AtlasTenant["accessScope"],
+    slug: row.slug ?? undefined,
+    permissions: fromJson<string[]>(row.permissions ?? []),
+    allowedApps: fromJson<string[]>(row.allowed_apps ?? []),
+    createdAt: new Date(row.created_at).toISOString() as ISODateTime,
+    updatedAt: new Date(row.updated_at).toISOString() as ISODateTime,
+    data: fromJson<Record<string, unknown>>(row.data ?? {}),
+    ...(row.owner_name ? { ownerName: row.owner_name } : {}),
+    ...(row.owner_email ? { ownerEmail: row.owner_email } : {})
+  };
+}
+
+async function listTenantRecords(): Promise<AtlasTenant[]> {
+  const result = await pgPool.query("select * from atlas_tenants order by created_at asc");
+  return result.rows.map(tenantFromRow);
+}
+
+function defaultPermissions(productLine: TenantProductLine): string[] {
+  if (productLine === "enterprise") {
+    return [
+      "enterprise:access",
+      "organization:read",
+      "organization:write",
+      "asset:read",
+      "asset:write",
+      "maintenance:write",
+      "workflow:approve",
+      "reports:read",
+      "ai:invoke"
+    ];
+  }
+  return ["field:access", "field:work_orders", "field:customers", "field:assets", "field:appointments", "ai:invoke"];
+}
+
+function defaultAllowedApps(productLine: TenantProductLine): string[] {
+  if (productLine === "enterprise") return ["enterprise"];
+  return ["field"];
+}
+
+async function saveTenantRecord(tenant: AtlasTenant): Promise<AtlasTenant> {
+  await pgPool.query(
+    `insert into atlas_tenants (id, code, name, product_line, plan, status, owner_name, owner_email, access_scope, created_at, updated_at, slug, permissions, allowed_apps, data)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     on conflict (code) do update set
+       name = excluded.name,
+       product_line = excluded.product_line,
+       plan = excluded.plan,
+       status = excluded.status,
+       owner_name = excluded.owner_name,
+       owner_email = excluded.owner_email,
+       access_scope = excluded.access_scope,
+       slug = excluded.slug,
+       permissions = excluded.permissions,
+       allowed_apps = excluded.allowed_apps,
+       updated_at = excluded.updated_at,
+       data = excluded.data`,
+    [
+      tenant.id,
+      tenant.code,
+      tenant.name,
+      tenant.productLine,
+      tenant.plan,
+      tenant.status,
+      tenant.ownerName ?? null,
+      tenant.ownerEmail ?? null,
+      tenant.accessScope,
+      tenant.createdAt,
+      tenant.updatedAt,
+      tenant.slug ?? null,
+      json(tenant.permissions),
+      json(tenant.allowedApps),
+      json(tenant.data)
+    ]
+  );
+  const [saved] = (await listTenantRecords()).filter((item) => item.code === tenant.code);
+  return saved ?? tenant;
+}
+
+function accessGrantFromRow(row: QueryResultRow): AtlasAccessGrant {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    tenantCode: row.tenant_code,
+    name: row.name,
+    email: row.email,
+    role: row.role as AtlasAccessGrant["role"],
+    status: row.status as AtlasAccessGrant["status"],
+    permissions: fromJson<string[]>(row.permissions ?? []),
+    createdAt: new Date(row.created_at).toISOString() as ISODateTime,
+    updatedAt: new Date(row.updated_at).toISOString() as ISODateTime,
+    data: fromJson<Record<string, unknown>>(row.data ?? {}),
+    ...(row.last_login_at ? { lastLoginAt: new Date(row.last_login_at).toISOString() as ISODateTime } : {})
+  };
+}
+
+async function listAccessGrantRecords(tenantId?: string): Promise<AtlasAccessGrant[]> {
+  const result = tenantId
+    ? await pgPool.query("select * from atlas_access_grants where tenant_id = $1 order by created_at asc", [tenantId])
+    : await pgPool.query("select * from atlas_access_grants order by created_at asc");
+  return result.rows.map(accessGrantFromRow);
+}
+
+async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAccessGrant> {
+  await pgPool.query(
+    `insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at, last_login_at, data)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     on conflict (tenant_id, email) do update set
+       name = excluded.name,
+       role = excluded.role,
+       status = excluded.status,
+       permissions = excluded.permissions,
+       updated_at = excluded.updated_at,
+       data = excluded.data`,
+    [
+      grant.id,
+      grant.tenantId,
+      grant.tenantCode,
+      grant.name,
+      grant.email,
+      grant.role,
+      grant.status,
+      json(grant.permissions),
+      grant.createdAt,
+      grant.updatedAt,
+      grant.lastLoginAt ?? null,
+      json(grant.data)
+    ]
+  );
+  const [saved] = (await listAccessGrantRecords(grant.tenantId)).filter((item) => item.email === grant.email);
+  return saved ?? grant;
+}
+
 async function saveAssetRecord(asset: Asset): Promise<void> {
   await assets.save(asset);
   await pgPool.query(
@@ -530,9 +796,9 @@ async function saveWorkOrderRecord(workOrder: WorkOrder): Promise<void> {
     `insert into work_orders (
        id, organization_id, asset_id, title, description, priority, state, due_at, budget, status, closed_at,
        technician_name, diagnosis, materials, labor_hours, labor_rate, labor_cost, estimated_duration_hours, checklist, evidence,
-       created_at, updated_at, data
+       created_at, updated_at, sequence_number, data
      )
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
      on conflict (id) do update set
        title = excluded.title,
        description = excluded.description,
@@ -552,6 +818,7 @@ async function saveWorkOrderRecord(workOrder: WorkOrder): Promise<void> {
        checklist = excluded.checklist,
        evidence = excluded.evidence,
        updated_at = excluded.updated_at,
+       sequence_number = excluded.sequence_number,
        data = excluded.data`,
     [
       workOrder.id,
@@ -576,6 +843,7 @@ async function saveWorkOrderRecord(workOrder: WorkOrder): Promise<void> {
       json(workOrder.evidence),
       workOrder.createdAt,
       workOrder.updatedAt,
+      workOrder.sequenceNumber ?? null,
       json(workOrder)
     ]
   );
@@ -749,6 +1017,100 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/field/profile") {
+      const tenantCode = url.searchParams.get("tenant") || "#00";
+      const email = url.searchParams.get("email") || "";
+
+      if (request.method === "GET") {
+        let result = await pgPool.query(
+          `select name, role, tenant_code as "tenantCode", email
+           from atlas_access_grants
+           where tenant_code = $1 and email = $2 and status = 'active'
+           limit 1`,
+          [tenantCode, email]
+        );
+
+        if (!result.rows[0]) {
+          result = await pgPool.query(
+            `select name, role, tenant_code as "tenantCode", email
+             from atlas_access_grants
+             where tenant_code = $1 and status = 'active'
+             order by (case when id = 'ag_field_00_marcelo' then 0 else 1 end) asc, created_at asc
+             limit 1`,
+            [tenantCode]
+          );
+        }
+
+        let profileData: any;
+        let resolvedTenantCode = tenantCode;
+        if (result.rows[0]) {
+          const row = result.rows[0];
+          const pwaRole = row.role === "technician" ? "Técnico" : row.role === "admin" ? "Supervisor" : row.role === "manager" ? "Financeiro" : "Técnico";
+          profileData = {
+            name: row.name,
+            role: pwaRole,
+            tenantCode: row.tenantCode,
+            accessLevel: row.role === "technician" ? "field_operator" : "field_manager",
+            email: row.email,
+            configured: true
+          };
+          resolvedTenantCode = row.tenantCode || tenantCode;
+        } else {
+          profileData = { configured: false, tenantCode, accessLevel: "field_operator" };
+        }
+        const tenantResult = await pgPool.query("select name, product_line as \"productLine\", plan, status from atlas_tenants where code = $1", [resolvedTenantCode]);
+        profileData.tenant = tenantResult.rows[0] || null;
+        send(response, 200, profileData);
+        return;
+      }
+
+      if (request.method === "POST" || request.method === "PATCH") {
+        const payload = await readJson<{ name?: string; role?: string }>(request);
+        const name = payload.name?.trim();
+        const role = payload.role?.trim();
+        if (!name || !role) {
+          send(response, 400, { error: "profile_required", message: "Informe nome e perfil para configurar o Field." });
+          return;
+        }
+
+        const saasRole = role === "Técnico" ? "technician" : role === "Financeiro" ? "manager" : role === "Supervisor" ? "admin" : "technician";
+
+        // Find the grant to update
+        let grantResult = await pgPool.query(
+          `select id from atlas_access_grants
+           where tenant_code = $1 and email = $2 and status = 'active'
+           limit 1`,
+          [tenantCode, email]
+        );
+
+        if (!grantResult.rows[0]) {
+          grantResult = await pgPool.query(
+            `select id from atlas_access_grants
+             where tenant_code = $1 and status = 'active'
+             order by (case when id = 'ag_field_00_marcelo' then 0 else 1 end) asc, created_at asc
+             limit 1`,
+            [tenantCode]
+          );
+        }
+
+        if (grantResult.rows[0]) {
+          const grantId = grantResult.rows[0].id;
+          await pgPool.query(
+            `update atlas_access_grants
+             set name = $1, role = $2, updated_at = now()
+             where id = $3`,
+            [name, saasRole, grantId]
+          );
+        } else {
+          send(response, 404, { error: "grant_not_found", message: "Acesso não encontrado para atualização." });
+          return;
+        }
+
+        send(response, 200, { configured: true, name, role, tenantCode, accessLevel: saasRole === "technician" ? "field_operator" : "field_manager" });
+        return;
+      }
+    }
+
     if (url.pathname === "/field/appointments") {
       const organizationId = organizationFrom(url, request);
 
@@ -765,7 +1127,7 @@ const server = createServer(async (request, response) => {
       }
 
       if (request.method === "POST") {
-        const payload = await readJson<{
+                const payload = await readJson<{
           title: string;
           scheduledAt: ISODateTime;
           durationMinutes?: number;
@@ -777,6 +1139,7 @@ const server = createServer(async (request, response) => {
           notes?: string;
           reminderEnabled?: boolean;
           reminderMinutesBefore?: number;
+          pinned?: boolean;
           organizationId?: OrganizationId;
         }>(request);
         const payloadOrganizationId = organizationId ?? payload.organizationId;
@@ -799,6 +1162,7 @@ const server = createServer(async (request, response) => {
           kind: payload.kind ?? "visit",
           status: "scheduled",
           reminderEnabled,
+          pinned: payload.pinned ?? false,
           createdAt: now,
           updatedAt: now,
           ...(payload.technicianName?.trim() ? { technicianName: payload.technicianName.trim() } : {}),
@@ -809,6 +1173,18 @@ const server = createServer(async (request, response) => {
           ...(reminderEnabled && reminderAt ? { reminderMinutesBefore, reminderAt } : {})
         };
         await saveAppointmentRecord(appointment);
+
+        const wo = appointment.workOrderId ? await findWorkOrderRecord(appointment.workOrderId) : null;
+        const hasBudget = Boolean(wo && wo.budget);
+        const budgetAmount = wo?.budget?.amount;
+        const budgetState = wo?.budget?.state;
+        const priority = wo?.priority ?? "normal";
+        const state = wo?.state ?? "opened";
+        const dueAt = wo?.dueAt;
+        const isDeadlineExpiring = dueAt
+          ? (new Date(dueAt).getTime() - new Date().getTime() < 86400000 * 2)
+          : false;
+
         await bus.publish(
           createEvent(
             "AgendaAppointmentScheduled",
@@ -825,7 +1201,15 @@ const server = createServer(async (request, response) => {
                 appointmentKind: appointment.kind,
                 reminderEnabled: appointment.reminderEnabled,
                 reminderAt: appointment.reminderAt,
-                workOrderId: appointment.workOrderId
+                workOrderId: appointment.workOrderId,
+                pinned: appointment.pinned,
+                hasBudget,
+                budgetAmount,
+                budgetState,
+                priority,
+                workOrderState: state,
+                dueAt,
+                isDeadlineExpiring
               }
             },
             context(request, payloadOrganizationId),
@@ -854,9 +1238,70 @@ const server = createServer(async (request, response) => {
       }
 
       if (request.method === "PATCH") {
-        const payload = await readJson<{ status?: AppointmentStatus }>(request);
-        const updated: FieldAppointment = { ...appointment, ...(payload.status ? { status: payload.status } : {}), updatedAt: systemClock.now() };
+        const payload = await readJson<{
+          title?: string;
+          scheduledAt?: ISODateTime;
+          durationMinutes?: number;
+          status?: AppointmentStatus;
+          kind?: FieldAppointment["kind"];
+          technicianName?: string | null;
+          customerName?: string | null;
+          location?: string | null;
+          workOrderId?: EntityId | null;
+          notes?: string | null;
+          reminderEnabled?: boolean;
+          reminderMinutesBefore?: number | null;
+          pinned?: boolean;
+        }>(request);
+
+        const now = systemClock.now();
+        const reminderEnabled = payload.reminderEnabled !== undefined ? Boolean(payload.reminderEnabled) : appointment.reminderEnabled;
+        const reminderMinutesBefore = payload.reminderMinutesBefore !== undefined ? (payload.reminderMinutesBefore ?? 30) : appointment.reminderMinutesBefore;
+        const scheduledAt = payload.scheduledAt ?? appointment.scheduledAt;
+        const reminderAt = reminderEnabled && reminderMinutesBefore
+          ? (new Date(new Date(scheduledAt).getTime() - reminderMinutesBefore * 60_000).toISOString() as ISODateTime)
+          : undefined;
+
+        const updated: any = {
+          ...appointment,
+          title: payload.title !== undefined ? payload.title.trim() : appointment.title,
+          scheduledAt,
+          durationMinutes: payload.durationMinutes !== undefined ? (payload.durationMinutes ?? 60) : appointment.durationMinutes,
+          status: payload.status ?? appointment.status,
+          kind: payload.kind ?? appointment.kind,
+          reminderEnabled,
+          pinned: payload.pinned !== undefined ? payload.pinned : appointment.pinned,
+          updatedAt: now
+        };
+
+        const technicianName = payload.technicianName !== undefined ? (payload.technicianName?.trim() || undefined) : appointment.technicianName;
+        const customerName = payload.customerName !== undefined ? (payload.customerName?.trim() || undefined) : appointment.customerName;
+        const location = payload.location !== undefined ? (payload.location?.trim() || undefined) : appointment.location;
+        const workOrderId = payload.workOrderId !== undefined ? (payload.workOrderId || undefined) : appointment.workOrderId;
+        const notes = payload.notes !== undefined ? (payload.notes?.trim() || undefined) : appointment.notes;
+        const finalReminderMinutesBefore = reminderEnabled ? reminderMinutesBefore : undefined;
+
+        if (technicianName !== undefined) updated.technicianName = technicianName; else delete updated.technicianName;
+        if (customerName !== undefined) updated.customerName = customerName; else delete updated.customerName;
+        if (location !== undefined) updated.location = location; else delete updated.location;
+        if (workOrderId !== undefined) updated.workOrderId = workOrderId; else delete updated.workOrderId;
+        if (notes !== undefined) updated.notes = notes; else delete updated.notes;
+        if (finalReminderMinutesBefore !== undefined) updated.reminderMinutesBefore = finalReminderMinutesBefore; else delete updated.reminderMinutesBefore;
+        if (reminderAt !== undefined) updated.reminderAt = reminderAt; else delete updated.reminderAt;
+
         await saveAppointmentRecord(updated);
+
+        const wo = updated.workOrderId ? await findWorkOrderRecord(updated.workOrderId) : null;
+        const hasBudget = Boolean(wo && wo.budget);
+        const budgetAmount = wo?.budget?.amount;
+        const budgetState = wo?.budget?.state;
+        const priority = wo?.priority ?? "normal";
+        const state = wo?.state ?? "opened";
+        const dueAt = wo?.dueAt;
+        const isDeadlineExpiring = dueAt
+          ? (new Date(dueAt).getTime() - new Date().getTime() < 86400000 * 2)
+          : false;
+
         await bus.publish(
           createEvent(
             "AgendaAppointmentUpdated",
@@ -867,13 +1312,72 @@ const server = createServer(async (request, response) => {
               appointmentId: updated.id,
               organizationId,
               subjectId: updated.workOrderId ?? updated.id,
-              metadata: { status: updated.status, scheduledAt: updated.scheduledAt, workOrderId: updated.workOrderId }
+              metadata: {
+                status: updated.status,
+                scheduledAt: updated.scheduledAt,
+                workOrderId: updated.workOrderId,
+                pinned: updated.pinned ?? false,
+                hasBudget,
+                budgetAmount,
+                budgetState,
+                priority,
+                workOrderState: state,
+                dueAt,
+                isDeadlineExpiring
+              }
             },
             context(request, organizationId),
             { organizationId, subjectId: updated.workOrderId ?? updated.id, sourceModule: "operations" }
           )
         );
         send(response, 200, { appointment: updated, timeline: await timeline.list({ organizationId, subjectId: updated.workOrderId ?? updated.id }) });
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        appointments.delete(appointmentId);
+        await pgPool.query("delete from field_appointments where id = $1 and organization_id = $2", [appointmentId, organizationId]);
+
+        const wo = appointment.workOrderId ? await findWorkOrderRecord(appointment.workOrderId) : null;
+        const hasBudget = Boolean(wo && wo.budget);
+        const budgetAmount = wo?.budget?.amount;
+        const budgetState = wo?.budget?.state;
+        const priority = wo?.priority ?? "normal";
+        const state = wo?.state ?? "opened";
+        const dueAt = wo?.dueAt;
+        const isDeadlineExpiring = dueAt
+          ? (new Date(dueAt).getTime() - new Date().getTime() < 86400000 * 2)
+          : false;
+
+        await bus.publish(
+          createEvent(
+            "AgendaAppointmentDeleted",
+            {
+              title: "Agendamento deletado",
+              body: `${appointment.title} removido`,
+              kind: "system",
+              appointmentId: appointment.id,
+              organizationId,
+              subjectId: appointment.workOrderId ?? appointment.id,
+              metadata: {
+                title: appointment.title,
+                scheduledAt: appointment.scheduledAt,
+                workOrderId: appointment.workOrderId,
+                pinned: appointment.pinned ?? false,
+                hasBudget,
+                budgetAmount,
+                budgetState,
+                priority,
+                workOrderState: state,
+                dueAt,
+                isDeadlineExpiring
+              }
+            },
+            context(request, organizationId),
+            { organizationId, subjectId: appointment.workOrderId ?? appointment.id, sourceModule: "operations" }
+          )
+        );
+        send(response, 200, { ok: true, appointmentId });
         return;
       }
     }
@@ -883,8 +1387,281 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/owner/tenants") {
+      send(response, 200, { items: await listTenantRecords() });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/owner/access-grants") {
+      send(response, 200, { items: await listAccessGrantRecords(url.searchParams.get("tenantId") ?? undefined) });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/owner/tenants") {
+      const payload = await readJson<{
+        code?: string;
+        slug?: string;
+        name: string;
+        productLine?: TenantProductLine;
+        plan?: string;
+        ownerName?: string;
+        ownerEmail?: string;
+        permissions?: string[];
+        allowedApps?: string[];
+      }>(request);
+      const now = systemClock.now();
+      const requestedProductLine = payload.productLine ?? "field";
+      const productLine: TenantProductLine =
+        requestedProductLine === "enterprise" || requestedProductLine === "field" ? requestedProductLine : "field";
+      const code = payload.code?.trim() || "#" + Math.random().toString(36).slice(2, 6).toUpperCase();
+      const slug = slugify(payload.slug?.trim() || payload.name || code) || slugify(code) || createId("tenant");
+      const tenant: AtlasTenant = {
+        id: createId("tn"),
+        code,
+        name: payload.name.trim(),
+        productLine,
+        plan: payload.plan ?? (productLine === "enterprise" ? "enterprise" : "field_solo"),
+        status: "active",
+        accessScope: "tenant",
+        slug,
+        permissions: payload.permissions?.filter(Boolean) ?? defaultPermissions(productLine),
+        allowedApps: payload.allowedApps?.filter(Boolean) ?? defaultAllowedApps(productLine),
+        createdAt: now,
+        updatedAt: now,
+        data: { createdBy: "owner", source: "owner_dashboard", version: 1 },
+        ...(payload.ownerName?.trim() ? { ownerName: payload.ownerName.trim() } : {}),
+        ...(payload.ownerEmail?.trim() ? { ownerEmail: payload.ownerEmail.trim() } : {})
+      };
+      const existingSlug = (await listTenantRecords()).find((item) => item.slug === slug && item.code !== code);
+      if (existingSlug) {
+        send(response, 409, { error: "slug_conflict", message: "Slug ja cadastrado para outro acesso." });
+        return;
+      }
+      const savedTenant = await saveTenantRecord(tenant);
+      if (payload.ownerEmail?.trim()) {
+        const ownerName = payload.ownerName?.trim() || "Responsável";
+        const ownerEmail = payload.ownerEmail.trim().toLowerCase();
+        const firstGrant: AtlasAccessGrant = {
+          id: createId("ag"),
+          tenantId: savedTenant.id,
+          tenantCode: savedTenant.code,
+          name: ownerName,
+          email: ownerEmail,
+          role: productLine === "field" ? "technician" : "admin",
+          status: "active",
+          permissions: savedTenant.permissions,
+          createdAt: now,
+          updatedAt: now,
+          data: { createdBy: "owner", source: "auto_tenant_creation" }
+        };
+        await saveAccessGrantRecord(firstGrant);
+      }
+      send(response, 201, { tenant: savedTenant });
+      return;
+    }
+
+    const ownerTenantMatch = url.pathname.match(/^\/owner\/tenants\/([^/]+)$/);
+    if (ownerTenantMatch && request.method === "PATCH") {
+      const tenantId = decodeURIComponent(ownerTenantMatch[1] ?? "");
+      const payload = await readJson<{
+        name?: string;
+        slug?: string;
+        ownerName?: string;
+        ownerEmail?: string;
+        productLine?: TenantProductLine;
+        plan?: string;
+        status?: AtlasTenant["status"];
+        allowedApps?: string[];
+        permissions?: string[];
+      }>(request);
+      const tenant = (await listTenantRecords()).find((item) => item.id === tenantId);
+      if (!tenant) {
+        send(response, 404, { error: "tenant_not_found", message: "Tenant não encontrado." });
+        return;
+      }
+
+      let slug = tenant.slug;
+      if (payload.slug !== undefined) {
+        const proposedSlug = slugify(payload.slug.trim()) || tenant.slug;
+        const conflict = (await listTenantRecords()).find((item) => item.slug === proposedSlug && item.id !== tenantId);
+        if (conflict) {
+          send(response, 409, { error: "slug_conflict", message: "Slug já cadastrado para outro acesso." });
+          return;
+        }
+        slug = proposedSlug;
+      }
+
+      const updatedTenant: AtlasTenant = {
+        ...tenant,
+        name: payload.name !== undefined ? payload.name.trim() : tenant.name,
+        productLine: payload.productLine !== undefined ? payload.productLine : tenant.productLine,
+        plan: payload.plan !== undefined ? payload.plan : tenant.plan,
+        status: payload.status !== undefined && ["active", "trial", "suspended", "archived"].includes(payload.status) ? payload.status : tenant.status,
+        allowedApps: payload.allowedApps !== undefined ? payload.allowedApps.filter(Boolean) : tenant.allowedApps,
+        permissions: payload.permissions !== undefined ? payload.permissions.filter(Boolean) : tenant.permissions,
+        updatedAt: systemClock.now(),
+        ...(slug ? { slug } : {}),
+        ...(payload.ownerName !== undefined ? (payload.ownerName.trim() ? { ownerName: payload.ownerName.trim() } : {}) : (tenant.ownerName ? { ownerName: tenant.ownerName } : {})),
+        ...(payload.ownerEmail !== undefined ? (payload.ownerEmail.trim() ? { ownerEmail: payload.ownerEmail.trim() } : {}) : (tenant.ownerEmail ? { ownerEmail: tenant.ownerEmail } : {}))
+      };
+
+      send(response, 200, { tenant: await saveTenantRecord(updatedTenant) });
+      return;
+    }
+
+    if (ownerTenantMatch && request.method === "DELETE") {
+      const tenantId = decodeURIComponent(ownerTenantMatch[1] ?? "");
+      await pgPool.query("delete from atlas_access_grants where tenant_id = $1", [tenantId]);
+      await pgPool.query("delete from atlas_tenants where id = $1", [tenantId]);
+      send(response, 200, { ok: true, tenantId, mode: "hard_delete_test" });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/owner/access-grants") {
+      const payload = await readJson<{
+        tenantId: string;
+        name: string;
+        email: string;
+        role?: AtlasAccessGrant["role"];
+        permissions?: string[];
+      }>(request);
+      const tenant = (await listTenantRecords()).find((item) => item.id === payload.tenantId);
+      if (!tenant) {
+        send(response, 404, { error: "tenant_not_found", message: "Tenant nao encontrado." });
+        return;
+      }
+      const now = systemClock.now();
+      const grant: AtlasAccessGrant = {
+        id: createId("ag"),
+        tenantId: tenant.id,
+        tenantCode: tenant.code,
+        name: payload.name.trim(),
+        email: payload.email.trim().toLowerCase(),
+        role: payload.role ?? "admin",
+        status: "invited",
+        permissions: payload.permissions?.filter(Boolean) ?? tenant.permissions,
+        createdAt: now,
+        updatedAt: now,
+        data: { createdBy: "owner", source: "owner_dashboard" }
+      };
+      send(response, 201, { grant: await saveAccessGrantRecord(grant) });
+      return;
+    }
+
+    const ownerAccessGrantMatch = url.pathname.match(/^\/owner\/access-grants\/([^/]+)$/);
+    if (ownerAccessGrantMatch && request.method === "PATCH") {
+      const grantId = decodeURIComponent(ownerAccessGrantMatch[1] ?? "");
+      const payload = await readJson<{
+        name?: string;
+        email?: string;
+        role?: AtlasAccessGrant["role"];
+        status?: AtlasAccessGrant["status"];
+        permissions?: string[];
+      }>(request);
+      const allGrants = await listAccessGrantRecords();
+      const grant = allGrants.find((item) => item.id === grantId);
+      if (!grant) {
+        send(response, 404, { error: "grant_not_found", message: "Acesso não encontrado." });
+        return;
+      }
+
+      let email = grant.email;
+      if (payload.email !== undefined) {
+        const proposedEmail = payload.email.trim().toLowerCase();
+        const conflict = allGrants.find(
+          (item) => item.tenantId === grant.tenantId && item.email === proposedEmail && item.id !== grantId
+        );
+        if (conflict) {
+          send(response, 409, { error: "email_conflict", message: "Este e-mail já está cadastrado para este tenant." });
+          return;
+        }
+        email = proposedEmail;
+      }
+
+      const updatedGrant: AtlasAccessGrant = {
+        ...grant,
+        name: payload.name !== undefined ? payload.name.trim() : grant.name,
+        email,
+        role: payload.role !== undefined ? payload.role : grant.role,
+        status: payload.status !== undefined ? payload.status : grant.status,
+        permissions: payload.permissions !== undefined ? payload.permissions.filter(Boolean) : grant.permissions,
+        updatedAt: systemClock.now()
+      };
+
+      await pgPool.query(
+        `update atlas_access_grants set
+           name = $1,
+           email = $2,
+           role = $3,
+           status = $4,
+           permissions = $5,
+           updated_at = $6
+         where id = $7`,
+        [
+          updatedGrant.name,
+          updatedGrant.email,
+          updatedGrant.role,
+          updatedGrant.status,
+          json(updatedGrant.permissions),
+          updatedGrant.updatedAt,
+          updatedGrant.id
+        ]
+      );
+
+      const [saved] = (await listAccessGrantRecords(updatedGrant.tenantId)).filter((item) => item.id === updatedGrant.id);
+      send(response, 200, { grant: saved ?? updatedGrant });
+      return;
+    }
+
+    if (ownerAccessGrantMatch && request.method === "DELETE") {
+      const grantId = decodeURIComponent(ownerAccessGrantMatch[1] ?? "");
+      const allGrants = await listAccessGrantRecords();
+      const grant = allGrants.find((item) => item.id === grantId);
+      if (!grant) {
+        send(response, 404, { error: "grant_not_found", message: "Acesso não encontrado." });
+        return;
+      }
+      await pgPool.query("delete from atlas_access_grants where id = $1", [grantId]);
+      send(response, 200, { ok: true, grantId });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/owner/summary") {
+      const tenants = await listTenantRecords();
+      const grants = await listAccessGrantRecords();
+      const [organizationsCount, assetsCount, workOrdersCount, openWorkOrdersCount] = await Promise.all([
+        pgPool.query("select count(*)::int as count from organizations"),
+        pgPool.query("select count(*)::int as count from assets"),
+        pgPool.query("select count(*)::int as count from work_orders"),
+        pgPool.query("select count(*)::int as count from work_orders where coalesce(data->>'state', 'opened') not in ('closed','cancelled')")
+      ]);
+      send(response, 200, {
+        owner: {
+          name: "DASHEM",
+          accessScope: "global",
+          role: "Super Admin"
+        },
+        totals: {
+          tenants: tenants.length,
+          activeTenants: tenants.filter((item) => item.status === "active").length,
+          fieldTenants: tenants.filter((item) => item.productLine === "field").length,
+          enterpriseTenants: tenants.filter((item) => item.productLine === "enterprise").length,
+          customers: organizationsCount.rows[0]?.count ?? 0,
+          assets: assetsCount.rows[0]?.count ?? 0,
+          workOrders: workOrdersCount.rows[0]?.count ?? 0,
+          openWorkOrders: openWorkOrdersCount.rows[0]?.count ?? 0,
+          accessGrants: grants.length,
+          invitedAccess: grants.filter((item) => item.status === "invited").length,
+          activeAccess: grants.filter((item) => item.status === "active").length
+        },
+        tenants: tenants.slice(0, 50),
+        accessGrants: grants.slice(0, 100)
+      });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/organizations") {
-      const payload = await readJson<{ name: string; slug: string; type?: "corporate" | "private"; monthlyContractValue?: number; targetSla?: number }>(request);
+      const payload = await readJson<{ name: string; slug: string; type?: "corporate" | "private"; monthlyContractValue?: number; targetSla?: number; address?: string; phone?: string; document?: string }>(request);
       const organization = await createOrganization(payload, context(request), bus);
       await saveOrganizationRecord(organization);
       send(response, 201, { organization });
@@ -998,6 +1775,26 @@ const server = createServer(async (request, response) => {
           workOrder: updated,
           timeline: await timeline.list({ organizationId, subjectId: workOrder.id })
         });
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        const workOrder = await findWorkOrderOrThrow(workOrderId, organizationId);
+        
+        // 1. Delete dependent rows in other tables first
+        await pgPool.query("delete from work_order_evidence where work_order_id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        await pgPool.query("delete from work_order_checklist where work_order_id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        await pgPool.query("delete from ai_artifacts where work_order_id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        await pgPool.query("delete from technical_report_versions where work_order_id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        
+        // 2. Unlink from appointments
+        await pgPool.query("update field_appointments set work_order_id = null where work_order_id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        
+        // 3. Delete from in-memory cache and DB
+        await workOrders.delete(workOrderId);
+        await pgPool.query("delete from work_orders where id = $1 and organization_id = $2", [workOrderId, organizationId]);
+        
+        send(response, 200, { success: true });
         return;
       }
     }

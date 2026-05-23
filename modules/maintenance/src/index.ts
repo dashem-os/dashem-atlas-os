@@ -76,6 +76,7 @@ export interface WorkOrder extends AtlasEntity, TenantScoped {
   readonly evidence: readonly Evidence[];
   readonly budget?: Budget;
   readonly closedAt?: ISODateTime;
+  readonly sequenceNumber?: string;
 }
 
 export interface CreateWorkOrderCommand {
@@ -92,6 +93,7 @@ export interface CreateWorkOrderCommand {
   readonly laborRate?: number;
   readonly estimatedDurationHours?: number;
   readonly checklist?: readonly string[];
+  readonly sequenceNumber?: string;
 }
 
 export interface ChangeWorkOrderStatusCommand {
@@ -173,7 +175,8 @@ export async function createWorkOrder(
       : {}),
     ...(command.estimatedDurationHours !== undefined ? { estimatedDurationHours: command.estimatedDurationHours } : {}),
     ...(command.description ? { description: command.description } : {}),
-    ...(command.dueAt ? { dueAt: command.dueAt } : {})
+    ...(command.dueAt ? { dueAt: command.dueAt } : {}),
+    ...(command.sequenceNumber?.trim() ? { sequenceNumber: command.sequenceNumber.trim() } : {})
   };
 
   await bus.publish(

@@ -11,7 +11,7 @@ ATLAS OS Field and ATLAS OS Enterprise are not separate systems. They are two in
 - unified events and operational timeline
 - work orders, assets, organizations, budgets, approvals, reports and monitoring modules
 - security, tenant context, observability and audit trails
-- the five ATLAS OS pillars
+- the five ATLAS OS pillars documented in [ATLAS_OS_5_PILLARS.md](ATLAS_OS_5_PILLARS.md)
 
 Domain rules, agent behavior, event contracts, timeline memory and governance should live in `core/*` and `modules/*`. Product-specific interaction patterns should live in app shells.
 

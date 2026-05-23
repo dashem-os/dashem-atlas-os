@@ -19,7 +19,11 @@ export type KnowledgeNodeType =
   | "sla"
   | "unit"
   | "evidence"
-  | "workflow";
+  | "workflow"
+  | "appointment"
+  | "priority"
+  | "budget"
+  | "risk";
 
 export type KnowledgeRelationType =
   | "opened_for_asset"
@@ -32,7 +36,11 @@ export type KnowledgeRelationType =
   | "has_recurrence"
   | "has_evidence"
   | "requires_human_decision"
-  | "coordinated_by_workflow";
+  | "coordinated_by_workflow"
+  | "scheduled_for_work_order"
+  | "has_priority"
+  | "has_budget"
+  | "deadline_risk";
 
 export interface OperationalSubjectSnapshot {
   readonly organizationId: OrganizationId;
@@ -939,7 +947,7 @@ export async function ingestEventIntoKnowledgeGraph(
   if (
     !event.metadata.organizationId ||
     !event.metadata.subjectId ||
-    event.metadata.sourceModule === "operations" ||
+    (event.metadata.sourceModule === "operations" && !event.name.startsWith("AgendaAppointment")) ||
     event.metadata.sourceModule === "monitoring" ||
     event.metadata.sourceModule === "timeline"
   ) {
@@ -964,6 +972,29 @@ export async function ingestEventIntoKnowledgeGraph(
 
   if (event.name === "MissingEvidenceDetected" || event.name === "MissingContextRequested") {
     relations.push(baseRelation(organizationId, subjectId, "work_order", createId("evd"), "evidence", "requires_human_decision", event.id));
+  }
+
+  if ((event.name === "AgendaAppointmentScheduled" || event.name === "AgendaAppointmentUpdated") && typeof payload.appointmentId === "string") {
+    const appointmentId = payload.appointmentId as EntityId;
+    const metadata = (payload.metadata || {}) as Record<string, unknown>;
+
+    if (typeof metadata.workOrderId === "string" && metadata.workOrderId) {
+      relations.push(baseRelation(organizationId, appointmentId, "appointment", metadata.workOrderId as EntityId, "work_order", "scheduled_for_work_order", event.id));
+    }
+
+    if (metadata.pinned === true) {
+      const priorityId = (metadata.priority as string) || "high";
+      relations.push(baseRelation(organizationId, appointmentId, "appointment", priorityId as EntityId, "priority", "has_priority", event.id));
+    }
+
+    if (metadata.hasBudget === true) {
+      const budgetId = (metadata.workOrderId ? `bdg-${metadata.workOrderId}` : createId("bdg")) as EntityId;
+      relations.push(baseRelation(organizationId, appointmentId, "appointment", budgetId, "budget", "has_budget", event.id));
+    }
+
+    if (metadata.isDeadlineExpiring === true) {
+      relations.push(baseRelation(organizationId, appointmentId, "appointment", "risk-deadline" as EntityId, "risk", "deadline_risk", event.id));
+    }
   }
 
   const created: KnowledgeGraphRelation[] = [];

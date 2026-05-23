@@ -10,6 +10,9 @@ export interface Organization extends AtlasEntity<OrganizationId> {
   readonly type?: "corporate" | "private";
   readonly monthlyContractValue?: number;
   readonly targetSla?: number;
+  readonly address?: string;
+  readonly phone?: string;
+  readonly document?: string;
 }
 
 export interface CreateOrganizationCommand {
@@ -18,6 +21,9 @@ export interface CreateOrganizationCommand {
   readonly type?: "corporate" | "private";
   readonly monthlyContractValue?: number;
   readonly targetSla?: number;
+  readonly address?: string;
+  readonly phone?: string;
+  readonly document?: string;
 }
 
 export async function createOrganization(
@@ -33,6 +39,9 @@ export async function createOrganization(
     ...(command.type ? { type: command.type } : {}),
     ...(command.monthlyContractValue !== undefined ? { monthlyContractValue: Number(command.monthlyContractValue) } : {}),
     ...(command.targetSla !== undefined ? { targetSla: Number(command.targetSla) } : {}),
+    ...(command.address !== undefined ? { address: command.address.trim() } : {}),
+    ...(command.phone !== undefined ? { phone: command.phone.trim() } : {}),
+    ...(command.document !== undefined ? { document: command.document.trim() } : {}),
     status: "active",
     createdAt: now,
     updatedAt: now

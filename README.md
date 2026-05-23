@@ -35,7 +35,7 @@ ATLAS OS has two experiences over the same core:
 - **ATLAS OS Field**: mobile-first PWA for technicians, lightweight finance users, autonomous workers, microbusinesses and supervisors. Its primary surface is an operational card dashboard with bottom navigation, a floating quick action button and AI in context.
 - **ATLAS OS Enterprise**: web-first administrative product for large engineering, maintenance and operations companies. It owns denser governance surfaces such as runtime cockpit, digital twin, knowledge graph, foresight, advanced finance, reports, integrations and permissions.
 
-Both lines use the same Agentic Platform, AI Gateway, event stream, operational timeline, modules and the five ATLAS OS pillars. Field must stay "touch and execute"; Enterprise is "administer, govern and analyze". See [docs/PRODUCT_LINES.md](docs/PRODUCT_LINES.md) and [docs/FIELD_ENTERPRISE_SPLIT.md](docs/FIELD_ENTERPRISE_SPLIT.md) before changing app architecture or navigation patterns.
+Both lines use the same Agentic Platform, AI Gateway, event stream, operational timeline, modules and the five ATLAS OS pillars. Field must stay "touch and execute"; Enterprise is "administer, govern and analyze". See [docs/ATLAS_OS_5_PILLARS.md](docs/ATLAS_OS_5_PILLARS.md), [docs/PRODUCT_LINES.md](docs/PRODUCT_LINES.md) and [docs/FIELD_ENTERPRISE_SPLIT.md](docs/FIELD_ENTERPRISE_SPLIT.md) before changing app architecture or navigation patterns.
 
 ## Architectural Rules
 

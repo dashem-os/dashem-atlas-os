@@ -41,6 +41,10 @@ export class InMemoryTenantRepository<T extends AtlasEntity<string> & TenantScop
     return { items: [...this.records.values()].slice(0, limit) };
   }
 
+  async delete(id: EntityId): Promise<void> {
+    this.records.delete(id);
+  }
+
   async listByOrganization(organizationId: OrganizationId, options: QueryOptions = {}): Promise<Page<T>> {
     const limit = options.limit ?? 100;
     const items = [...this.records.values()]
