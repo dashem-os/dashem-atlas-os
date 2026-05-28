@@ -255,7 +255,7 @@ const html = String.raw`<!doctype html>
       .op-card.orange .op-icon, .op-card.orange strong { color: var(--amber); }
       .op-card.green .op-icon, .op-card.green strong { color: var(--green); }
       .op-card.blue .op-icon, .op-card.blue strong { color: #58a9ff; }
-      .op-card.purple .op-icon, .op-card.purple strong { color: #b985ff; }
+
 
       .panel {
         border-radius: 8px;
@@ -458,6 +458,110 @@ const html = String.raw`<!doctype html>
       .badge.progress { background: rgba(255, 159, 26, 0.14); color: var(--amber); }
       .badge.done { background: rgba(40, 215, 120, 0.14); color: var(--green); }
       .badge.danger { background: rgba(255, 90, 101, 0.14); color: var(--danger); }
+
+      /* KANBAN BOARD STYLES */
+      .kanban-board {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+        height: 100%;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
+      }
+      .kanban-col {
+        flex: 1;
+        min-width: 250px;
+        max-width: 320px;
+        background: rgba(13, 27, 38, 0.45);
+        border: 1px solid rgba(73, 180, 232, 0.16);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        min-height: 480px;
+        transition: border-color 0.2s, background-color 0.2s;
+      }
+      .kanban-col.drag-hover {
+        border-color: var(--amber);
+        background: rgba(255, 159, 26, 0.08);
+      }
+      .kanban-col-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 12px;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid rgba(73, 180, 232, 0.1);
+        padding-bottom: 6px;
+      }
+      .kanban-col-count {
+        background: rgba(73, 180, 232, 0.16);
+        color: var(--text-soft);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 99px;
+      }
+      .kanban-col-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 100px;
+      }
+      .kanban-card {
+        background: rgba(16, 33, 44, 0.7);
+        border: 1px solid rgba(73, 180, 232, 0.12);
+        border-radius: 8px;
+        padding: 10px;
+        cursor: grab;
+        display: grid;
+        gap: 6px;
+        transition: transform 0.15s, border-color 0.15s;
+        user-select: none;
+      }
+      .kanban-card:active {
+        cursor: grabbing;
+      }
+      .kanban-card:hover {
+        border-color: rgba(73, 180, 232, 0.4);
+        transform: translateY(-2px);
+      }
+      .kanban-card.selected {
+        border-color: var(--amber);
+        box-shadow: 0 0 12px rgba(255, 159, 26, 0.15);
+      }
+      .kanban-card-title {
+        font-weight: bold;
+        font-size: 12px;
+        color: var(--text);
+        margin: 0;
+      }
+      .kanban-card-info {
+        font-size: 10px;
+        color: var(--text-soft);
+        margin: 0;
+      }
+      .kanban-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 4px;
+      }
+      .mini-badge {
+        font-size: 8px;
+        font-weight: bold;
+        padding: 1px 4px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        background: rgba(73, 180, 232, 0.12);
+        color: var(--text-soft);
+      }
 
       form { display: grid; gap: 10px; }
       label { display: grid; gap: 5px; color: var(--text-soft); font-size: 12px; font-weight: 800; }
@@ -930,6 +1034,204 @@ const html = String.raw`<!doctype html>
           gap: 12px;
         }
       }
+
+      /* HIDE MOBILE BOTTOM NAV ON DESKTOP */
+      @media (min-width: 981px) {
+        .bottom { display: none !important; }
+      }
+
+      /* MEU AJUDANTE EXPENSES AND CATEGORIES STYLES */
+      .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .category-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .category-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--line-strong);
+        box-shadow: var(--shadow);
+      }
+      .category-circle-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .category-card span {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .category-card small {
+        font-size: 10px;
+        color: var(--text-soft);
+        background: rgba(255,255,255,0.06);
+        padding: 2px 6px;
+        border-radius: 99px;
+      }
+      .expense-ledger {
+        margin-top: 20px;
+        display: grid;
+        gap: 8px;
+      }
+      .expense-card {
+        background: var(--surface-gradient);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .expense-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .expense-meta {
+        display: grid;
+        gap: 2px;
+      }
+      .expense-meta strong {
+        font-size: 14px;
+        color: var(--text);
+      }
+      .expense-meta small {
+        font-size: 12px;
+        color: var(--text-soft);
+      }
+      .expense-amount {
+        font-size: 15px;
+        font-weight: bold;
+        color: var(--danger);
+      }
+
+      /* ACCENT HIGHLIGHTS FOR MEU AJUDANTE STYLE */
+      :root {
+        --accent: #00f0c0 !important;
+      }
+      .side button.active, .side button:hover {
+        border-color: var(--accent) !important;
+        background: rgba(0, 240, 192, 0.1) !important;
+      }
+      .bottom button.active {
+        color: var(--accent) !important;
+      }
+      .primary {
+        border: 1px solid var(--accent) !important;
+        background: linear-gradient(135deg, #00d4a8, #00f0c0) !important;
+        color: #0b0f14 !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 20px rgba(0, 240, 192, 0.3) !important;
+      }
+      .badge.progress {
+        background: rgba(0, 240, 192, 0.15) !important;
+        color: var(--accent) !important;
+      }
+      
+      /* Color picker elements for category create */
+      .color-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform 0.1s ease;
+      }
+      .color-dot.active {
+        border-color: #fff;
+        transform: scale(1.15);
+      }
+      .icon-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.06);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        font-size: 16px;
+        border: 2px solid transparent;
+      }
+      .icon-dot.active {
+        border-color: var(--accent);
+        background: rgba(0, 240, 192, 0.1);
+      }
+
+      /* Premium custom popover styles for FSM flow trail chips */
+      .trail-chip {
+        position: relative;
+      }
+      .trail-chip .tooltip-popover {
+        visibility: hidden;
+        position: absolute;
+        z-index: 1000;
+        bottom: 135%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--panel-strong);
+        color: var(--text);
+        border: 1px solid var(--line-strong);
+        padding: 10px 14px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        width: 240px;
+        white-space: normal;
+        text-align: left;
+        font-size: 10px;
+        font-weight: normal;
+        opacity: 0;
+        transition: opacity 0.2s, visibility 0.2s;
+        pointer-events: none;
+        line-height: 1.5;
+        backdrop-filter: blur(12px);
+      }
+      .trail-chip:hover .tooltip-popover {
+        visibility: visible;
+        opacity: 1;
+      }
+      .trail-chip .tooltip-popover::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: var(--line-strong) transparent transparent transparent;
+      }
+      .trail-chip .tooltip-popover strong {
+        display: block;
+        font-size: 11px;
+        margin-bottom: 4px;
+        color: var(--amber);
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 4px;
+      }
+      .trail-chip .tooltip-popover span {
+        display: block;
+        margin-bottom: 2px;
+      }
+
     </style>
   </head>
   <body>
@@ -949,6 +1251,7 @@ const html = String.raw`<!doctype html>
           <button data-tab="orders"><span>▣</span>Ordens de serviço</button>
           <button data-tab="agenda"><span>◇</span>Agenda inteligente</button>
           <button data-tab="finance"><span>$</span>Financeiro</button>
+          <button data-tab="tools"><span>🔧</span>Ferramentas</button>
           <button data-tab="ai"><span>✦</span>Assistente IA</button>
           <button data-tab="profile"><span>○</span>Perfil</button>
         </div>
@@ -1014,33 +1317,88 @@ const html = String.raw`<!doctype html>
 
         <div id="orders" class="view">
           <div class="orders-layout">
-            <section class="panel">
-              <div class="panel-title">
-                <h2>Ordens de Serviço</h2>
-                <button class="secondary" data-quick="work-order">Nova OS</button>
+            <section class="panel" style="display: flex; flex-direction: column;">
+              <div class="panel-title" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; width: 100%;">
+                <h2 style="margin: 0;">Ordens de Serviço</h2>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <button class="secondary" id="btn-toggle-kanban" style="padding: 6px 12px; font-size: 11px; font-weight: bold; background: linear-gradient(135deg, #0ea5e9, #0284c7) !important; color: #fff !important; border: none; box-shadow: 0 0 10px rgba(14, 165, 233, 0.25);">📋 Ver Kanban</button>
+                  <button class="secondary" data-quick="work-order">Nova OS</button>
+                </div>
               </div>
-              <div class="tabs">
-                <button class="tab active" data-filter="all">Todas</button>
-                <button class="tab" data-filter="open">Em aberto</button>
-                <button class="tab" data-filter="progress">Em andamento</button>
-                <button class="tab" data-filter="done">Concluidas</button>
+              
+              <!-- LIST VIEW MODE CONTAINER -->
+              <div id="view-mode-list" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                <div class="tabs" style="overflow-x: auto; white-space: nowrap; display: flex; gap: 8px; padding-bottom: 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; flex-shrink: 0;">
+                  <button class="tab active" data-filter="all" style="flex-shrink: 0;">Todas</button>
+                  <button class="tab" data-filter="requested" style="flex-shrink: 0;">Pendentes</button>
+                  <button class="tab" data-filter="budget_sent" style="flex-shrink: 0;">Negociação</button>
+                  <button class="tab" data-filter="approved" style="flex-shrink: 0;">Aprovadas</button>
+                  <button class="tab" data-filter="in_progress" style="flex-shrink: 0;">Execução</button>
+                  <button class="tab" data-filter="closed" style="flex-shrink: 0;">Concluídas</button>
+                  <button class="tab" data-filter="cancelled" style="flex-shrink: 0;">Canceladas</button>
+                </div>
+                <div class="order-list" id="work-order-list" style="flex: 1; overflow-y: auto;"></div>
               </div>
-              <div class="order-list" id="work-order-list"></div>
+
+              <!-- KANBAN VIEW MODE CONTAINER -->
+              <div id="view-mode-kanban" style="display: none; flex-direction: column; flex: 1; min-height: 0; overflow-x: auto; width: 100%;">
+                <div class="kanban-board" id="work-order-kanban-board" style="display: flex; gap: 12px; padding: 4px; height: 100%; min-height: 480px; align-items: stretch;">
+                  <!-- Columns will be filled dynamically -->
+                </div>
+              </div>
             </section>
             <aside class="panel">
               <div class="panel-title">
                 <h3>OS selecionada</h3>
                 <span class="chip" id="selected-state">Aguardando</span>
               </div>
+              <div class="tabs" style="margin-bottom: 10px; display: flex; gap: 8px;">
+                <button class="tab active" id="aside-tab-general" style="flex: 1; padding: 6px 12px; font-size: 12px; min-height: auto;">Geral</button>
+                <button class="tab" id="aside-tab-laudo" style="flex: 1; padding: 6px 12px; font-size: 12px; min-height: auto;">Laudo Técnico</button>
+              </div>
               <div id="selected-work-order" class="slot">Selecione uma OS para operar.</div>
-              <div class="actions" style="margin-top: 12px">
+              <div id="selected-work-order-laudo" class="slot" style="display: none;">
+                <form id="laudo-form" style="display: grid; gap: 8px; margin: 0;">
+                  <label style="font-size: 12px;">
+                    Constatações Técnicas (Laudo Inicial)
+                    <textarea id="laudo-inicial-input" style="width: 100%; height: 55px; font-size: 12px;" placeholder="Sintomas, medições, problemas identificados..."></textarea>
+                  </label>
+                  <label style="font-size: 12px;">
+                    Conclusão dos Serviços (Laudo Final)
+                    <textarea id="laudo-final-input" style="width: 100%; height: 55px; font-size: 12px;" placeholder="Ações tomadas, peças trocadas, conformidade..."></textarea>
+                  </label>
+                  <label style="font-size: 12px;">
+                    Validade da Garantia (Dias)
+                    <input type="number" id="laudo-garantia-input" style="width: 100%; font-size: 12px;" min="0" placeholder="Ex: 90" value="90" />
+                  </label>
+                  <div style="border-top:1px dashed var(--line); margin:6px 0; padding-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <label style="font-size: 11px; margin:0;">
+                      📸 Foto ANTES
+                      <input type="file" id="laudo-photo-before" accept="image/*" style="font-size:10px; width:100%;" />
+                      <div id="laudo-preview-before" style="margin-top:4px; display:none;"><img src="" style="width:45px; height:45px; object-fit:cover; border-radius:4px; border:1px solid var(--line);" /></div>
+                    </label>
+                    <label style="font-size: 11px; margin:0;">
+                      📸 Foto DEPOIS
+                      <input type="file" id="laudo-photo-after" accept="image/*" style="font-size:10px; width:100%;" />
+                      <div id="laudo-preview-after" style="margin-top:4px; display:none;"><img src="" style="width:45px; height:45px; object-fit:cover; border-radius:4px; border:1px solid var(--line);" /></div>
+                    </label>
+                  </div>
+                  <button type="submit" class="primary" style="margin-top: 4px; font-size: 12px; min-height: 32px; padding: 4px 12px;">Salvar Laudo</button>
+                </form>
+              </div>
+              <div class="actions" style="margin-top: 12px; display: grid; gap: 8px;">
+                <button id="view-laudo-btn" class="primary" style="background: linear-gradient(135deg, #0284c7, #0ea5e9) !important; color:#fff !important; border:none !important; min-height: 42px; font-weight: bold; box-shadow: 0 0 15px rgba(14, 165, 233, 0.25) !important;">📋 Gerar Laudo Técnico</button>
+                <button id="share-whatsapp-btn" class="primary" style="background: linear-gradient(135deg, #16a34a, #22c55e) !important; color:#fff !important; border:none !important; min-height: 42px; font-weight: bold; box-shadow: 0 0 15px rgba(34, 197, 94, 0.25) !important; display:flex; align-items:center; justify-content:center; gap:8px;">💬 Enviar no WhatsApp</button>
+                <button id="view-recibo-btn" class="primary" style="background: linear-gradient(135deg, #0d6b7a, #1e3a8a) !important; color:#fff !important; border:none !important; min-height: 42px; font-weight: bold; box-shadow: 0 0 15px rgba(13, 107, 122, 0.25) !important;">🧾 Gerar Recibo e Garantia</button>
+                <div style="border-top: 1px solid var(--line); margin: 8px 0;"></div>
                 <button id="attach-evidence" class="secondary">Evidência</button>
                 <button id="diagnosis-agent" class="secondary">Diagnóstico IA</button>
                 <button id="budget-agent" class="secondary">Orçamento IA</button>
-                <button id="submit-budget" class="primary">Enviar orçamento</button>
-                <button id="approve-budget" class="secondary">Aprovar</button>
-                <button id="start-work" class="secondary">Executar</button>
-                <button id="close-work" class="secondary">Encerrar</button>
+                <button id="submit-budget" class="primary">💸 4. Enviar Orçamento</button>
+                <button id="approve-budget" class="secondary">✍️ 8. Coletar Aceite Formal</button>
+                <button id="start-work" class="secondary">⚙️ 6. Iniciar Execução</button>
+                <button id="close-work" class="secondary">🏁 9. Encerrar & Faturar</button>
+                <button id="rework-work" class="secondary" style="border-color: var(--danger); color: var(--danger); display: none;">🔄 Solicitar Retrabalho</button>
                 <button id="edit-work-order" class="secondary">Editar</button>
                 <button id="cancel-work-order" class="secondary" style="border-color: var(--danger); color: var(--danger);">Cancelar</button>
                 <button id="delete-work-order" class="secondary" style="border-color: var(--danger); color: var(--danger);">Excluir</button>
@@ -1048,94 +1406,185 @@ const html = String.raw`<!doctype html>
             </aside>
           </div>
 
-          <div class="orders-layout">
-            <form id="work-order-form" class="panel">
-              <div class="panel-title"><h3>Nova ordem de serviço</h3></div>
-              <div class="work-order-intake">
-                <label>Número da OS<input name="sequenceNumber" placeholder="Ex: OS-001" required /></label>
-                <div class="customer-picker">
-                  <label for="work-order-customer-search">Cliente</label>
-                  <input id="work-order-customer-search" autocomplete="off" placeholder="Buscar ou cadastrar cliente" />
-                  <div id="customer-suggestions" class="customer-suggestions" hidden></div>
-                  <div id="selected-customer-card" class="selected-customer-card empty">
-                    <small>Nenhum cliente selecionado.</small>
+<!-- PREMIUM CENTERED OVERLAY MODAL FOR WORK ORDER FORM -->
+          <div class="modal-overlay" id="work-order-modal" aria-hidden="true" style="z-index: 120;">
+            <div class="modal-card" style="max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 24px;">
+              <header class="modal-header" style="margin-bottom: 14px;">
+                <h3 id="work-order-modal-title" style="color: var(--accent); margin:0;">🛠 Ordem de Serviço</h3>
+                <button class="secondary" id="btn-close-work-order-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+
+              <div class="orders-layout" style="display: grid; grid-template-columns: 1fr 340px; gap: 18px;">
+                <form id="work-order-form" class="panel" style="margin: 0; padding: 14px; border: 1px solid var(--line);">
+                  <div class="panel-title" style="margin-bottom: 10px;"><h4>Dados Operacionais</h4></div>
+                  <div class="work-order-intake">
+                    <label>Número da OS<input name="sequenceNumber" placeholder="Ex: OS-001" required /></label>
+                    <div class="customer-picker">
+                      <label for="work-order-customer-search">Cliente</label>
+                      <input id="work-order-customer-search" autocomplete="off" placeholder="Buscar ou cadastrar cliente" />
+                      <div id="customer-suggestions" class="customer-suggestions" hidden></div>
+                      <div id="selected-customer-card" class="selected-customer-card empty">
+                        <small>Nenhum cliente selecionado.</small>
+                      </div>
+                      <select id="work-order-organization-select" class="work-order-hidden-select" tabindex="-1" aria-hidden="true"></select>
+                    </div>
+                    <label class="asset-field">Ativo<select id="asset-select"></select></label>
                   </div>
-                  <select id="work-order-organization-select" class="work-order-hidden-select" tabindex="-1" aria-hidden="true"></select>
-                </div>
-                <label class="asset-field">Ativo<select id="asset-select"></select></label>
-              </div>
-              <label>Título<input name="title" placeholder="Manutenção em ar condicionado split" required /></label>
-              <label>Descrição<textarea name="description"></textarea></label>
-              <div class="inline">
-                <label>Técnico<input name="technicianName" /></label>
-                <label>Prioridade<select name="priority"><option value="normal">Normal</option><option value="low">Baixa</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label>
-              </div>
-              <div class="inline">
-                <label>SLA / prazo<input name="dueAt" type="datetime-local" /></label>
-                <label>Duração estimada (h)<input name="estimatedDurationHours" type="number" min="0" step="0.5" /></label>
-              </div>
-              <label>Diagnóstico<textarea name="diagnosis"></textarea></label>
-              
-              <!-- Materials dynamic list builder -->
-              <div class="materials-builder" style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: rgba(0,0,0,0.01);">
-                <span style="font-weight: 800; font-size: 12px; display: block; margin-bottom: 8px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em;">Materiais e Peças</span>
-                <div style="display: grid; grid-template-columns: 2fr 80px 100px auto; gap: 8px; align-items: flex-end;">
-                  <label>Especificação / Nome<input id="mat-name" placeholder="Ex: Filtro de ar" /></label>
-                  <label>Qtd<input id="mat-qty" type="number" min="0" step="any" placeholder="1" /></label>
-                  <label>V. Unitário<input id="mat-price" type="number" min="0" step="0.01" placeholder="0.00" /></label>
-                  <button type="button" id="add-material-btn" class="secondary" style="min-height: 40px; padding: 0 16px; font-weight: bold; border-color: var(--line-strong);">➕</button>
-                </div>
-                <div id="materials-table-container" style="margin-top: 12px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);">
-                  <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                    <thead>
-                      <tr style="border-bottom: 1px solid var(--line); background: rgba(0, 0, 0, 0.03); color: var(--text-soft);">
-                        <th style="padding: 8px; font-weight: 700;">Item</th>
-                        <th style="padding: 8px; text-align: right; font-weight: 700; width: 60px;">Qtd</th>
-                        <th style="padding: 8px; text-align: right; font-weight: 700; width: 100px;">P. Unitário</th>
-                        <th style="padding: 8px; text-align: right; font-weight: 700; width: 110px;">Subtotal</th>
-                        <th style="padding: 8px; text-align: center; width: 50px; font-weight: 700;">Remover</th>
-                      </tr>
-                    </thead>
-                    <tbody id="materials-list-body">
-                      <!-- Dynamic list will render here -->
-                    </tbody>
-                    <tfoot>
-                      <tr style="font-weight: bold; border-top: 2px solid var(--line); background: rgba(0, 0, 0, 0.01);">
-                        <td colspan="3" style="padding: 8px; text-align: right; color: var(--text-soft);">Total Materiais:</td>
-                        <td style="padding: 8px; text-align: right; color: var(--text);" id="materials-total-sum">R$ 0,00</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
+                  
+                  <!-- ANTES / DEPOIS PHOTO UPLOADER (MVP 15 SECONDS FLOW) -->
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.01);">
+                    <label style="margin:0;">
+                      <span style="font-weight:bold; font-size:12px; display:block; margin-bottom:4px; color:var(--text-soft);">📸 Foto ANTES (Diagnóstico)</span>
+                      <div style="display:flex; gap:6px;">
+                        <input type="file" id="evidence-photo-before" accept="image/*" style="font-size:11px; flex:1; min-width:0;" />
+                        <button type="button" id="btn-predictive-vision" class="secondary" style="display:none; font-size:11px; padding:2px 8px; min-height:auto; border-color:var(--accent); white-space:nowrap;">🧠 Analisar Foto</button>
+                      </div>
+                      <div id="preview-photo-before" style="margin-top:6px; display:none;"><img src="" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" /></div>
+                    </label>
+                    <label style="margin:0;">
+                      <span style="font-weight:bold; font-size:12px; display:block; margin-bottom:4px; color:var(--text-soft);">📸 Foto DEPOIS (Conclusão)</span>
+                      <input type="file" id="evidence-photo-after" accept="image/*" style="font-size:11px;" />
+                      <div id="preview-photo-after" style="margin-top:6px; display:none;"><img src="" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" /></div>
+                    </label>
+                  </div>
+                  
+                  <!-- VOICE RECORDING OVERLAY WAVE (FASE 4) -->
+                  <div id="voice-wave-overlay" style="display:none; background:rgba(0,11,20,0.95); border:1px solid var(--accent); border-radius:8px; padding:12px; margin-bottom:12px; align-items:center; gap:12px; box-shadow: 0 0 14px rgba(0, 240, 192, 0.2);">
+                    <div style="font-size:24px; animation: pulse 1s infinite; line-height:1;">🎙️</div>
+                    <div style="flex:1;">
+                      <span style="font-weight:bold; font-size:12px; color:var(--accent); display:block; margin-bottom:2px;">Gravando sua voz... Fale de forma rápida.</span>
+                      <span style="font-size:11px; color:var(--text-soft);" id="voice-wave-timer">00:00 / 00:30 (Clique em Parar para formalizar)</span>
+                    </div>
+                    <button type="button" id="btn-stop-voice" class="primary" style="background:#ff4c4c; border-color:#ff4c4c; font-size:11px; padding:4px 8px; min-height:auto; font-weight:bold; color:#fff;">🟥 Parar</button>
+                  </div>
+                  
+                  <label>Título<input name="title" placeholder="Manutenção em ar condicionado split" required /></label>
+                  
+                  <label style="position:relative;">
+                    <span>Descrição</span>
+                    <textarea name="description" id="txt-description"></textarea>
+                    <button type="button" id="btn-mic-description" class="secondary" style="position:absolute; right:6px; top:28px; padding:4px 8px; font-size:15px; min-height:auto; border:none; background:none; cursor:pointer;" title="Gravar por voz">🎙️</button>
+                  </label>
+                  
+                  <div class="inline">
+                    <label>Técnico<input name="technicianName" /></label>
+                    <label>Prioridade<select name="priority"><option value="normal">Normal</option><option value="low">Baixa</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label>
+                  </div>
+                  <div class="inline">
+                    <label>SLA / prazo<input name="dueAt" type="datetime-local" /></label>
+                    <label>Duração estimada (h)<input name="estimatedDurationHours" type="number" min="0" step="0.5" /></label>
+                  </div>
+                  
+                  <label style="position:relative;">
+                    <span>Diagnóstico</span>
+                    <textarea name="diagnosis" id="txt-diagnosis"></textarea>
+                    <button type="button" id="btn-mic-diagnosis" class="secondary" style="position:absolute; right:6px; top:28px; padding:4px 8px; font-size:15px; min-height:auto; border:none; background:none; cursor:pointer;" title="Gravar por voz">🎙️</button>
+                  </label>
+                  
+                  <!-- Materials dynamic list builder -->
+                  <div class="materials-builder" style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: rgba(0,0,0,0.01);">
+                    <span style="font-weight: 800; font-size: 12px; display: block; margin-bottom: 8px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em;">Materiais e Peças</span>
+                    <div style="display: grid; grid-template-columns: 2fr 80px 100px auto; gap: 8px; align-items: flex-end;">
+                      <label>Especificação / Nome<input id="mat-name" placeholder="Ex: Filtro de ar" /></label>
+                      <label>Qtd<input id="mat-qty" type="number" min="0" step="any" placeholder="1" /></label>
+                      <label>V. Unitário<input id="mat-price" type="number" min="0" step="0.01" placeholder="0.00" /></label>
+                      <button type="button" id="add-material-btn" class="secondary" style="min-height: 40px; padding: 0 16px; font-weight: bold; border-color: var(--line-strong);">➕</button>
+                    </div>
+                    <div id="materials-table-container" style="margin-top: 12px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                        <thead>
+                          <tr style="border-bottom: 1px solid var(--line); background: rgba(0, 0, 0, 0.03); color: var(--text-soft);">
+                            <th style="padding: 8px; font-weight: 700;">Item</th>
+                            <th style="padding: 8px; text-align: right; font-weight: 700; width: 60px;">Qtd</th>
+                            <th style="padding: 8px; text-align: right; font-weight: 700; width: 100px;">P. Unitário</th>
+                            <th style="padding: 8px; text-align: right; font-weight: 700; width: 110px;">Subtotal</th>
+                            <th style="padding: 8px; text-align: center; width: 50px; font-weight: 700;">Remover</th>
+                          </tr>
+                        </thead>
+                        <tbody id="materials-list-body">
+                          <!-- Dynamic list will render here -->
+                        </tbody>
+                        <tfoot>
+                          <tr style="font-weight: bold; border-top: 2px solid var(--line); background: rgba(0, 0, 0, 0.01);">
+                            <td colspan="3" style="padding: 8px; text-align: right; color: var(--text-soft);">Total Materiais:</td>
+                            <td style="padding: 8px; text-align: right; color: var(--text);" id="materials-total-sum">R$ 0,00</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
 
-              <div class="inline">
-                <label>Mão de obra R$/h<input name="laborRate" type="number" min="0" step="0.01" /></label>
-                <label>Horas de mão de obra<input name="laborHours" type="number" min="0" step="0.5" /></label>
-              </div>
-              <div id="work-order-form-actions" style="display: flex; gap: 8px; margin-top: 6px;">
-                <button class="primary" type="submit" style="flex: 1;" id="work-order-submit-btn">Abrir OS</button>
-                <button class="secondary" type="button" id="work-order-cancel-btn" style="display: none; flex: 1;">Cancelar Edição</button>
-              </div>
-            </form>
+                  <div class="inline">
+                    <label>Mão de obra R$/h<input name="laborRate" type="number" min="0" step="0.01" /></label>
+                    <label>Horas de mão de obra<input name="laborHours" type="number" min="0" step="0.5" /></label>
+                  </div>
+                  <div id="work-order-form-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="primary" type="submit" style="flex: 1;" id="work-order-submit-btn">Salvar OS</button>
+                    <button class="secondary" type="button" id="work-order-cancel-btn" style="display: none; flex: 1;">Cancelar Edição</button>
+                  </div>
+                </form>
 
-            <form id="budget-form" class="panel">
-              <div class="panel-title"><h3>Composição de orçamento</h3></div>
-              <div class="inline">
-                <label>Materiais<input name="materialsTotal" type="number" min="0" step="0.01" /></label>
-                <label>Mão de obra<input name="laborTotal" type="number" min="0" step="0.01" /></label>
+                <form id="budget-form" class="panel" style="margin: 0; padding: 14px; border: 1px solid var(--line);">
+                  <div class="panel-title" style="margin-bottom: 10px;">
+                    <h4>Composição de Orçamento</h4>
+                  </div>
+                  
+                  <!-- SUGGESTION REGIONAL ALERT PANEL -->
+                  <div style="background: rgba(0, 240, 192, 0.06); border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 12px; color: var(--text-soft);">
+                      💡 <strong>Copiloto de Preços</strong><br/>
+                      Consulte a média regional recomendada por IA para esta OS.
+                    </div>
+                    <button type="button" id="btn-suggest-regional" class="secondary" style="font-size: 11px; padding: 4px 8px; border-color: var(--accent); min-height: auto;">💡 Sugerir Preço</button>
+                  </div>
+                  
+                  <div class="inline">
+                    <label>Materiais<input name="materialsTotal" type="number" min="0" step="0.01" /></label>
+                    <label>Mão de obra<input name="laborTotal" type="number" min="0" step="0.01" /></label>
+                  </div>
+                  <div class="inline">
+                    <label>Margem (%)<input name="marginPercent" type="number" min="0" /></label>
+                    <label>Duração (h)<input name="durationHours" type="number" min="0" step="0.5" /></label>
+                  </div>
+                  
+                  <!-- CUSTOS INVISÍVEIS CALCULATOR (FASE 2) -->
+                  <div style="border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.02);">
+                    <span style="font-weight:bold; font-size:11px; text-transform:uppercase; color:var(--text-soft); display:block; margin-bottom:6px; letter-spacing:0.05em;">🚗 Calculadora de Custos Invisíveis</span>
+                    <div class="inline" style="gap:8px; margin-bottom:6px;">
+                      <label style="margin:0;">Distância (Km)<input id="budget-distance" type="number" min="0" value="10" placeholder="0" /></label>
+                      <label style="margin:0;">Trânsito (min)<input id="budget-duration" type="number" min="0" value="20" placeholder="0" /></label>
+                    </div>
+                    <div style="font-size:11px; display:flex; justify-content:space-between; opacity:0.85; margin-top:4px; padding-top:4px; border-top:1px dashed var(--line);">
+                      <span>Combustível (10km/L @ R$5.90): <strong id="val-fuel-cost">R$ 5,90</strong></span>
+                      <span>Hora Trânsito (@ R$40/h): <strong id="val-transit-cost">R$ 13,33</strong></span>
+                    </div>
+                  </div>
+                  
+                  <!-- COPILOTO DE MARGEM LÍQUIDA REAL (FASE 2) -->
+                  <div id="real-margin-panel" style="border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: rgba(20,28,38,0.5); display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:bold; color:var(--text-soft);">Margem Líquida Real:</span>
+                      <span id="real-margin-badge" style="font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 12px; background: rgba(0,240,192,0.1); color: var(--accent);">35% - Saudável</span>
+                    </div>
+                    <div style="height: 6px; width: 100%; background: var(--line); border-radius: 3px; overflow: hidden; margin: 4px 0;">
+                      <div id="real-margin-bar" style="height: 100%; width: 35%; background: var(--accent); transition: width 0.3s ease, background-color 0.3s ease;"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:2px;">
+                      <span>Lucro Real: <strong id="real-profit-val" style="color:var(--text);">R$ 0,00</strong></span>
+                      <span>Hora Líquida: <strong id="net-hourly-rate" style="color:var(--text);">R$ 0,00/h</strong></span>
+                    </div>
+                  </div>
+
+                  <div class="inline">
+                    <label>Risco<select name="risk"><option value="low">Baixo</option><option value="medium">Medio</option><option value="high">Alto</option></select></label>
+                    <label>Preço final<input name="amount" type="number" min="0" step="0.01" required /></label>
+                  </div>
+                  <label>Notas<textarea name="notes" placeholder="Notas sobre a precificacao..."></textarea></label>
+                  <button type="submit" class="primary" style="margin-top: 12px; width: 100%; min-height: 44px; font-weight: bold; background: linear-gradient(135deg, #10b981, #059669) !important; color:#fff !important; border:none; box-shadow: 0 0 15px rgba(5, 150, 105, 0.25);">🚀 Enviar Orçamento Oficial</button>
+                </form>
               </div>
-              <div class="inline">
-                <label>Margem (%)<input name="marginPercent" type="number" min="0" step="0.01" value="20" /></label>
-                <label>Duração (h)<input name="durationHours" type="number" min="0" step="0.5" /></label>
-              </div>
-              <div class="inline">
-                <label>Risco<select name="riskLevel"><option value="low">Baixo</option><option value="medium">Médio</option><option value="high">Alto</option><option value="critical">Crítico</option></select></label>
-                <label>Preço final<input name="amount" type="number" min="0" step="0.01" required /></label>
-              </div>
-              <label>Notas<textarea name="notes"></textarea></label>
-            </form>
+            </div>
           </div>
         </div>
 
@@ -1198,12 +1647,334 @@ const html = String.raw`<!doctype html>
         </div>
 
         <div id="finance" class="view">
-          <div class="summary" id="finance-metrics"></div>
-          <div class="finance-grid">
-            <div class="panel"><div class="panel-title"><h2>Fluxo de caixa</h2></div><div id="cashflow" class="smart-slots"></div></div>
-            <div class="panel"><div class="panel-title"><h2>Inadimplência</h2></div><div class="slot"><strong>Sem bloqueios críticos</strong><small>Use a IA para prever atraso por cliente e OS.</small></div></div>
-            <div class="panel"><div class="panel-title"><h2>Faturamento</h2></div><div class="slot"><strong id="billing-total">R$ 0,00</strong><small>Receita aprovada em ordens ativas.</small></div></div>
+          <div class="summary" id="finance-metrics">
+            <div class="metric"><strong class="accent" id="expense-month-total">R$ 0,00</strong><span>Despesas do Mês</span></div>
+            <div class="metric"><strong id="expense-count-total">0</strong><span>Registros</span></div>
+            <div class="metric"><strong id="cashflow-billing-total">R$ 0,00</strong><span>Faturamento Ativo</span></div>
+            <div class="metric"><strong class="accent" id="cashflow-balance-total">R$ 0,00</strong><span>Saldo Projetado</span></div>
           </div>
+          
+          <div class="orders-layout" style="grid-template-columns: minmax(0, 1fr) 360px;">
+            <div class="panel">
+              <div class="panel-title">
+                <h2>Categorias de Gastos</h2>
+                <button class="primary" id="btn-open-category-modal" style="min-height:36px; padding:6px 12px; font-size:12px;">+ Nova Categoria</button>
+              </div>
+              <p style="font-size:12px; margin-top:2px;">Gerencie as categorias dos seus gastos.</p>
+              <div class="categories-grid" id="categories-list-container">
+                <!-- Preenchido dinamicamente -->
+              </div>
+
+              <div class="panel-title" style="margin-top: 26px;">
+                <h2>Lançamentos de Gastos</h2>
+                <button class="primary" id="btn-open-expense-modal" style="min-height:36px; padding:6px 12px; font-size:12px;">+ Registrar Gasto</button>
+              </div>
+              <p style="font-size:12px; margin-top:2px;">Acompanhe seus gastos organizados por mês.</p>
+              <div class="expense-ledger" id="expenses-list-container">
+                <!-- Preenchido dinamicamente -->
+              </div>
+            </div>
+
+            <aside class="panel">
+              <div class="panel-title"><h3>Filtragem Mensal</h3></div>
+              <select id="expense-month-filter" style="width: 100%; margin-bottom: 12px;">
+                <!-- Preenchido dinamicamente com meses disponíveis -->
+              </select>
+              <div class="smart-slots">
+                <div class="slot">
+                  <strong>Saldo Operacional</strong>
+                  <small id="aside-revenue-total">Faturamento: R$ 0,00</small>
+                  <small id="aside-expenses-total" style="color: var(--danger);">Despesas: R$ 0,00</small>
+                  <hr style="border: none; border-top: 1px solid var(--line); margin: 6px 0;" />
+                  <strong id="aside-net-total">Líquido: R$ 0,00</strong>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div id="inventory" class="view">
+          <div style="display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: flex-start;">
+            <section class="panel">
+              <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h2>Estoque de Combate ("Porta-Malas")</h2>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="search-inventory-input" placeholder="Pesquisar peça..." style="padding: 6px 12px; border-radius: 6px; font-size: 13px; max-width: 200px;" />
+                  <button class="primary" id="btn-open-inventory-modal" style="min-height: auto; padding: 6px 12px; font-size: 13px;">➕ Novo Insumo</button>
+                </div>
+              </div>
+              <div id="inventory-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
+                <!-- Dynamically filled -->
+              </div>
+            </section>
+            
+            <aside class="panel" style="display: flex; flex-direction: column; gap: 14px;">
+              <div class="panel-title"><h3>Carrinho de Compras</h3></div>
+              <div style="background: rgba(0, 240, 192, 0.05); border: 1px dashed var(--accent); border-radius: 8px; padding: 12px;">
+                <span style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 6px; color: var(--accent);">🛒 Inteligência de Reposição</span>
+                <p style="font-size: 11px; margin: 0 0 10px; color: var(--text-soft);">Abaixo estão compiladas as peças cujo nível está igual ou abaixo do estoque mínimo de segurança.</p>
+                <div id="shopping-list-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 12px;">
+                  <!-- Dynamic shopping list items -->
+                </div>
+                <button class="primary" id="btn-share-shopping-whatsapp" style="width: 100%; font-size: 12px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  💬 Enviar Lista ao Fornecedor
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div id="tools" class="view">
+          <div class="summary" id="tools-metrics">
+            <div class="metric"><strong id="metric-registered-materials">0</strong><span>Materiais</span></div>
+            <div class="metric"><strong id="metric-registered-services">0</strong><span>Serviços Cadastrados</span></div>
+            <div class="metric"><strong id="metric-registered-clients">0</strong><span>Clientes Salvos</span></div>
+            <div class="metric"><strong class="accent" id="metric-active-signatures">0</strong><span>Assinaturas</span></div>
+          </div>
+
+          <!-- Tools Hub Grid -->
+          <div class="finance-grid" id="tools-hub-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 24px;">
+            <div class="op-card orange" id="tool-signature-btn" style="cursor: pointer;">
+              <div class="op-icon">✍</div>
+              <div>
+                <strong>Assinatura Digital</strong>
+                <span>Assine documentos e OS diretamente na tela</span>
+              </div>
+            </div>
+            <div class="op-card green" id="tool-calc-prices-btn" style="cursor: pointer;">
+              <div class="op-icon">🧮</div>
+              <div>
+                <strong>Calculadora de Preços</strong>
+                <span>Orçamento automático com materiais + margem</span>
+              </div>
+            </div>
+            <div class="op-card blue" id="tool-calc-travel-btn" style="cursor: pointer;">
+              <div class="op-icon">🚗</div>
+              <div>
+                <strong>Custo de Deslocamento</strong>
+                <span>Calcule combustível e distância</span>
+              </div>
+            </div>
+            <div class="op-card orange" id="tool-price-table-btn" style="cursor: pointer;">
+              <div class="op-icon">📋</div>
+              <div>
+                <strong>Tabela de Preços Médios</strong>
+                <span>Valores recomendados de serviços</span>
+              </div>
+            </div>
+            <div class="op-card green" id="tool-materials-btn" style="cursor: pointer;">
+              <div class="op-icon">🧱</div>
+              <div>
+                <strong>Lista de Materiais</strong>
+                <span>Gerencie seus insumos e cabos</span>
+              </div>
+            </div>
+            <div class="op-card blue" id="tool-services-btn" style="cursor: pointer;">
+              <div class="op-icon">🛠</div>
+              <div>
+                <strong>Serviços Cadastrados</strong>
+                <span>Consulte e gerencie atendimentos</span>
+              </div>
+            </div>
+            <div class="op-card orange" id="tool-clients-btn" style="cursor: pointer;">
+              <div class="op-icon">👥</div>
+              <div>
+                <strong>Lista de Clientes</strong>
+                <span>Listagem de contatos e endereços</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Individual Tool Panels (Beautiful centered overlay modals!) -->
+          
+          <!-- 1. ASSINATURA DIGITAL MODAL -->
+          <div class="modal-overlay" id="panel-tool-signature" aria-hidden="true">
+            <div class="modal-card" style="max-width: 480px;">
+              <header class="modal-header">
+                <h2>✍ Assinatura Digital</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 14px;">
+                <canvas id="signature-canvas" width="400" height="200" style="border: 2px dashed var(--line-strong); border-radius: 12px; background: rgba(0,0,0,0.15); width: 100%; max-width: 400px; touch-action: none; cursor: crosshair;"></canvas>
+                <div class="actions">
+                  <button class="secondary" id="btn-clear-signature">Limpar</button>
+                  <button class="primary" id="btn-save-signature">Salvar Assinatura</button>
+                </div>
+                <div id="signature-preview-container" style="display: none; text-align: center; margin-top: 10px; width:100%;">
+                  <p>Assinatura Salva:</p>
+                  <img id="signature-preview-img" src="" style="border: 1px solid var(--line); border-radius: 8px; max-width: 100%; background: #fff;" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. CALCULADORA DE PREÇOS MODAL -->
+          <div class="modal-overlay" id="panel-tool-calc-prices" aria-hidden="true">
+            <div class="modal-card" style="max-width: 500px;">
+              <header class="modal-header">
+                <h2>🧮 Calculadora de Preços</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="display: grid; gap: 12px; margin-top: 14px;">
+                <label>Valor dos Materiais (R$)<input type="number" id="calc-materials-cost" value="0" step="0.01" /></label>
+                <div class="inline">
+                  <label>Horas de Trabalho<input type="number" id="calc-labor-hours" value="0" step="0.5" /></label>
+                  <label>Valor da Hora (R$)<input type="number" id="calc-labor-rate" value="50" /></label>
+                </div>
+                <label>Margem de Lucro Desejada (%)<input type="number" id="calc-profit-margin" value="20" /></label>
+                
+                <div class="slot" style="background: rgba(0,0,0,0.2); border-color: var(--line-strong); margin-top: 10px; padding: 16px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Custo de Mão de Obra:</span><strong id="res-labor-cost">R$ 0,00</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Custo Total de Produção:</span><strong id="res-production-cost">R$ 0,00</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Valor do Lucro:</span><strong id="res-profit-value">R$ 0,00</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--accent); border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; font-size:18px;">
+                    <span>Preço Final Recomendado:</span><span id="res-final-price">R$ 0,00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. CUSTO DE DESLOCAMENTO MODAL -->
+          <div class="modal-overlay" id="panel-tool-calc-travel" aria-hidden="true">
+            <div class="modal-card" style="max-width: 500px;">
+              <header class="modal-header">
+                <h2>🚗 Custo de Deslocamento</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="display: grid; gap: 12px; margin-top: 14px;">
+                <label>Distância da Viagem (km)<input type="number" id="travel-distance" value="0" step="0.1" /></label>
+                <div class="inline">
+                  <label>Consumo do Veículo (km/L)<input type="number" id="travel-efficiency" value="10" step="0.1" /></label>
+                  <label>Preço do Combustível (R$/L)<input type="number" id="travel-fuel-price" value="5.89" step="0.01" /></label>
+                </div>
+                <label>Outros Custos (Pedágio, etc. - R$)<input type="number" id="travel-other-costs" value="0" /></label>
+                
+                <div class="slot" style="background: rgba(0,0,0,0.2); border-color: var(--line-strong); margin-top: 10px; padding: 16px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Combustível Necessário:</span><strong id="res-fuel-liters">0,00 L</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">
+                    <span>Custo do Combustível:</span><strong id="res-fuel-cost">R$ 0,00</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--accent); border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; font-size:18px;">
+                    <span>Custo Total do Deslocamento:</span><span id="res-travel-total">R$ 0,00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. TABELA DE PREÇOS MÉDIOS MODAL -->
+          <div class="modal-overlay" id="panel-tool-price-table" aria-hidden="true">
+            <div class="modal-card" style="max-width: 680px; width: 90%;">
+              <header class="modal-header">
+                <h2>📋 Tabela de Preços Médios</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="margin-top: 14px;">
+                <input type="text" id="search-price-table" placeholder="Filtrar tabela..." style="margin-bottom: 12px;" />
+                <div style="overflow-x: auto; border: 1px solid var(--line); border-radius: 8px;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                    <thead>
+                      <tr style="background: var(--panel-strong); border-bottom: 1px solid var(--line);">
+                        <th style="padding: 10px;">Serviço / Atendimento</th>
+                        <th style="padding: 10px;">Unidade</th>
+                        <th style="padding: 10px; text-align: right;">Faixa Média</th>
+                      </tr>
+                    </thead>
+                    <tbody id="price-table-rows">
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Instalação de Tomada Elétrica Simples</td><td style="padding: 10px;">Un</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 45,00 - R$ 75,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Substituição de Disjuntor Monofásico</td><td style="padding: 10px;">Un</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 60,00 - R$ 90,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Instalação de Interruptor Simples/Paralelo</td><td style="padding: 10px;">Un</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 50,00 - R$ 85,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Instalação de Chuveiro Elétrico</td><td style="padding: 10px;">Un</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 90,00 - R$ 150,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Revisão Geral de Quadro de Distribuição (QDC)</td><td style="padding: 10px;">Un</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 250,00 - R$ 450,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Passagem de Cabeamento (Fios e Cabos) (por metro)</td><td style="padding: 10px;">Metro</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 8,00 - R$ 15,00</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 10px; font-weight: bold;">Atendimento Técnico Emergencial (Geral)</td><td style="padding: 10px;">Visita</td><td style="padding: 10px; text-align: right; color: var(--accent);">R$ 150,00 - R$ 250,00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. CADASTRO DE MATERIAIS MODAL -->
+          <div class="modal-overlay" id="panel-tool-materials" aria-hidden="true">
+            <div class="modal-card" style="max-width: 600px; width: 90%;">
+              <header class="modal-header">
+                <h2>🧱 Lista de Materiais</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="margin-top: 14px;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items:center;">
+                  <input type="text" id="search-materials-input" placeholder="Pesquisar..." style="flex: 1;" />
+                  <button class="primary" id="btn-add-material-modal" style="min-height: 40px; padding: 0 16px; font-size:12px;">+ Novo Material</button>
+                </div>
+                <div id="materials-list-container" class="smart-slots" style="max-height: 320px; overflow-y: auto;">
+                  <!-- Preenchido dinamicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. CADASTRO DE SERVIÇOS MODAL -->
+          <div class="modal-overlay" id="panel-tool-services" aria-hidden="true">
+            <div class="modal-card" style="max-width: 600px; width: 90%;">
+              <header class="modal-header">
+                <h2>🛠 Lista de Serviços</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="margin-top: 14px;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items:center;">
+                  <input type="text" id="search-services-input" placeholder="Pesquisar..." style="flex: 1;" />
+                  <button class="primary" id="btn-add-service-modal" style="min-height: 40px; padding: 0 16px; font-size:12px;">+ Novo Serviço</button>
+                </div>
+                <div id="services-list-container" class="smart-slots" style="max-height: 320px; overflow-y: auto;">
+                  <!-- Preenchido dinamicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. CADASTRO DE CLIENTES MODAL -->
+          <div class="modal-overlay" id="panel-tool-clients" aria-hidden="true">
+            <div class="modal-card" style="max-width: 600px; width: 90%;">
+              <header class="modal-header">
+                <h2>👥 Lista de Clientes</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <div style="margin-top: 14px;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items:center;">
+                  <input type="text" id="search-clients-input" placeholder="Pesquisar..." style="flex: 1;" />
+                  <button class="primary" id="btn-add-client-modal" style="min-height: 40px; padding: 0 16px; font-size:12px;">+ Novo Cliente</button>
+                </div>
+                <div id="clients-list-container" class="smart-slots" style="max-height: 320px; overflow-y: auto;">
+                  <!-- Preenchido dinamicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div id="ai" class="view">
@@ -1231,6 +2002,55 @@ const html = String.raw`<!doctype html>
                 </select>
               </label>
               <button class="primary" type="submit" style="margin-top: 8px;">Salvar Perfil</button>
+            </form>
+          </div>
+
+          <div class="panel" style="max-width: 480px; margin: 0 auto 16px auto;">
+            <div class="panel-title">
+              <h2>Identidade do Recibo (Branding)</h2>
+              <span class="chip">Recibo</span>
+            </div>
+            <form id="branding-form" style="display: grid; gap: 14px; margin-top: 16px;">
+              <label>
+                Nome do Emissor / Empresa
+                <input name="emissorName" id="branding-emissor-name-input" required style="width: 100%;" placeholder="Ex: João Silva Serviços, Razão Social, MEI..." />
+              </label>
+              <label>
+                Tipo de Emissor
+                <select name="brandType" id="branding-brand-type-select" style="width: 100%;">
+                  <option value="AUTONOMO">Profissional Autônomo</option>
+                  <option value="MEI">Microempreendedor Individual (MEI)</option>
+                  <option value="FREELANCE">Freelancer</option>
+                  <option value="EMPRESA">Empresa Geral (Razão/Fantasia)</option>
+                </select>
+              </label>
+              <label>
+                Logotipo URL
+                <input name="logoUrl" id="branding-logo-url-input" style="width: 100%;" placeholder="https://exemplo.com/logo.png" />
+              </label>
+              <div class="inline">
+                <label>
+                  Telefone
+                  <input name="phone" id="branding-phone-input" style="width: 100%;" placeholder="(11) 99999-9999" />
+                </label>
+                <label>
+                  E-mail
+                  <input name="email" id="branding-email-input" type="email" style="width: 100%;" placeholder="contato@empresa.com" />
+                </label>
+              </div>
+              <label>
+                Endereço
+                <input name="address" id="branding-address-input" style="width: 100%;" placeholder="Rua, número, bairro, cidade - UF" />
+              </label>
+              <label>
+                Chave Pix (para pagamentos do recibo)
+                <input name="pixKey" id="branding-pix-key-input" style="width: 100%;" placeholder="Ex: celular, email, CPF, chave aleatória" />
+              </label>
+              <label>
+                Termos da Garantia Padrão
+                <textarea name="warrantyTerms" id="branding-warranty-terms-textarea" style="width: 100%; height: 80px;" placeholder="Ex: Garantia de mão de obra de 90 dias a partir da entrega..."></textarea>
+              </label>
+              <button class="primary" type="submit" style="margin-top: 8px;">Salvar Identidade do Recibo</button>
             </form>
           </div>
 
@@ -1299,9 +2119,12 @@ const html = String.raw`<!doctype html>
     <!-- Overlay modal for viewing appointment details -->
     <div class="modal-overlay" id="appointment-modal" aria-hidden="true">
       <div class="modal-card">
-        <header class="modal-header">
-          <h3 id="modal-title">Detalhes do Agendamento</h3>
-          <span class="badge" id="modal-status-badge">scheduled</span>
+        <header class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+          <h3 id="modal-title" style="margin: 0;">Detalhes do Agendamento</h3>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge" id="modal-status-badge" style="margin: 0;">scheduled</span>
+            <button class="secondary" id="btn-close-appointment-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+          </div>
         </header>
         <div class="modal-body" id="modal-details-content">
           <!-- Dynamically filled -->
@@ -1317,8 +2140,9 @@ const html = String.raw`<!doctype html>
     <!-- Custom Confirm Modal -->
     <div class="modal-overlay" id="confirm-modal" aria-hidden="true">
       <div class="modal-card">
-        <header class="modal-header">
-          <h3 id="confirm-modal-title">Confirmação</h3>
+        <header class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+          <h3 id="confirm-modal-title" style="margin: 0;">Confirmação</h3>
+          <button class="secondary" id="btn-close-confirm-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
         </header>
         <div class="modal-body">
           <p id="confirm-modal-message">Deseja realmente realizar esta ação?</p>
@@ -1330,11 +2154,257 @@ const html = String.raw`<!doctype html>
       </div>
     </div>
 
+    <!-- Custom Evidence Modal -->
+    <div class="modal-overlay" id="evidence-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card" style="max-width: 480px;">
+        <header class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+          <h3 style="margin: 0; color: var(--accent);">📸 Adicionar Evidência</h3>
+          <button class="secondary" id="btn-close-evidence-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="evidence-create-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+          <label>Título da Evidência
+            <input id="evidence-title-input" placeholder="Ex: Medição de Tensão" required />
+          </label>
+          <label>Notas / Observações
+            <textarea id="evidence-notes-input" style="height: 80px;" placeholder="Ex: Constatado valor de 220V com variação de +-5%..."></textarea>
+          </label>
+          <div class="actions" style="margin-top: 8px; justify-content: flex-end;">
+            <button type="button" class="secondary" id="btn-cancel-evidence-modal">Cancelar</button>
+            <button type="submit" class="primary" style="background: var(--amber); border-color: var(--amber); color: #fff;">Salvar Evidência</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Adicionar Novo Insumo ao Estoque (FASE 3) -->
+    <div class="modal-overlay" id="inventory-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card" style="max-width: 480px;">
+        <header class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+          <h3 style="margin: 0; color: var(--accent);">📦 Novo Insumo no Porta-Malas</h3>
+          <button class="secondary" id="btn-close-inventory-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="inventory-create-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+          <label>Nome do Insumo / Peça<input id="inv-material-name" placeholder="Ex: Disjuntor DIN 20A" required /></label>
+          <div class="inline">
+            <label>Quantidade Inicial<input id="inv-quantity" type="number" min="0" value="5" required /></label>
+            <label>Unidade<select id="inv-unit"><option value="Unidade">Unidade</option><option value="Metro">Metro</option><option value="Rolo">Rolo</option><option value="Pacote">Pacote</option></select></label>
+          </div>
+          <div class="inline">
+            <label>Estoque Mínimo<input id="inv-min-safety" type="number" min="0" value="2" required /></label>
+            <label>Custo Unitário (R$)<input id="inv-unit-cost" type="number" min="0" step="0.01" value="0.00" required /></label>
+          </div>
+          <div class="actions" style="margin-top: 8px; justify-content: flex-end;">
+            <button class="secondary" type="button" id="btn-cancel-inventory-creation">Cancelar</button>
+            <button class="primary" type="submit">Cadastrar Insumo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Adicionar Novo Material -->
+    <div class="modal-overlay" id="material-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3 style="color: var(--accent);">🧱 Adicionar novo material</h3>
+          <button class="secondary" id="btn-close-material-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="material-create-form" style="margin-top: 10px;">
+          <label>
+            Título do Material
+            <input type="text" id="material-title-input" required placeholder="Digite aqui o nome do material" autocomplete="off" />
+            <div id="material-autocomplete-list" class="customer-suggestions" hidden style="z-index: 160;"></div>
+          </label>
+          <div class="inline">
+            <label>
+              Unidade de Medida <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span>
+              <select id="material-unit-select">
+                <option value="Unidade">Unidade</option>
+                <option value="Metro">Metro</option>
+                <option value="Rolo">Rolo</option>
+                <option value="Pacote">Pacote</option>
+              </select>
+            </label>
+            <label>
+              Valor do Material <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span>
+              <input type="number" id="material-value-input" step="0.01" placeholder="Ex: R$ 57,00" />
+            </label>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
+            <span style="font-size: 13px; font-weight: bold; color: var(--text-soft);">Habilitar margem de lucro</span>
+            <input type="checkbox" id="material-margin-toggle" style="width: 20px; height: 20px;" />
+          </div>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end;">
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Adicionar Material</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Adicionar Novo Serviço -->
+    <div class="modal-overlay" id="service-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3 style="color: var(--accent);">🛠 Adicionar novo serviço</h3>
+          <button class="secondary" id="btn-close-service-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="service-create-form" style="margin-top: 10px;">
+          <label>
+            Título do Serviço
+            <input type="text" id="service-title-input" required placeholder="Digite aqui o nome do serviço" autocomplete="off" />
+            <div id="service-autocomplete-list" class="customer-suggestions" hidden style="z-index: 160;"></div>
+          </label>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; margin-bottom: 12px;">
+            <span style="font-size: 13px; font-weight: bold; color: var(--text-soft);">Habilitar cálculo por hora</span>
+            <input type="checkbox" id="service-hourly-toggle" style="width: 20px; height: 20px;" />
+          </div>
+          <label>
+            Valor do Serviço <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span>
+            <input type="number" id="service-value-input" step="0.01" placeholder="Ex: R$ 57,00" />
+          </label>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end;">
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Adicionar Serviço</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Adicionar Novo Cliente -->
+    <div class="modal-overlay" id="client-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3 style="color: var(--accent);">👥 Adicionar novo cliente</h3>
+          <button class="secondary" id="btn-close-client-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="client-create-form" style="margin-top: 10px; display: grid; gap: 12px;">
+          <div class="inline">
+            <label>Nome do Cliente<input type="text" id="client-name-input" required placeholder="Digite aqui o nome do cliente" /></label>
+            <label>CPF/CNPJ <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span><input type="text" id="client-doc-input" placeholder="000.000.000-00 ou 00.000.000/0001-00" /></label>
+          </div>
+          <div class="inline">
+            <label>Telefone do Cliente<input type="text" id="client-phone-input" required placeholder="(00) 00000-0000" /></label>
+            <label>E-mail do Cliente <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span><input type="email" id="client-email-input" placeholder="pedro@gmail.com" /></label>
+          </div>
+          <label>Endereço <span style="color: var(--text-soft); font-size:10px; font-weight:normal;">Opcional</span><input type="text" id="client-address-input" placeholder="Av. Portugal, 4340, Itapoã - Belo Horizonte/MG" /></label>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end;">
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Adicionar Cliente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Recusa de Orçamento (Motivo de Declínio) -->
+    <div class="modal-overlay" id="decline-reason-modal" aria-hidden="true" style="z-index: 160;">
+      <div class="modal-card" style="max-width: 450px;">
+        <header class="modal-header">
+          <h3 style="color: var(--danger);">🚫 Recusar Orçamento</h3>
+          <button class="secondary" id="btn-close-decline-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="decline-reason-form" style="margin-top: 10px; display: grid; gap: 12px;">
+          <label>Motivo da Recusa *
+            <select id="decline-category-select" required style="width: 100%; height: 38px; font-size: 13px;">
+              <option value="price_high">Preço muito alto (price_high)</option>
+              <option value="scope_mismatch">Incompatibilidade de escopo (scope_mismatch)</option>
+              <option value="deadline_unavailable">Prazo indisponível (deadline_unavailable)</option>
+              <option value="competitor_chosen">Concorrente escolhido (competitor_chosen)</option>
+              <option value="client_postponed">Adiado pelo cliente (client_postponed)</option>
+              <option value="no_response">Sem resposta do cliente (no_response)</option>
+              <option value="other">Outro motivo (other)</option>
+            </select>
+          </label>
+          <label>Observações Adicionais
+            <textarea id="decline-notes-input" style="width: 100%; height: 70px; font-size: 12px;" placeholder="Detalhes opcionais sobre o motivo da recusa..."></textarea>
+          </label>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end; display: flex; gap: 8px;">
+            <button class="secondary" type="button" id="btn-cancel-decline">Cancelar</button>
+            <button class="primary" type="submit" style="background: var(--danger); border-color: var(--danger); color: #fff;">Confirmar Recusa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Ativação e Customização de Garantia -->
+    <div class="modal-overlay" id="warranty-customization-modal" aria-hidden="true" style="z-index: 160;">
+      <div class="modal-card" style="max-width: 450px;">
+        <header class="modal-header">
+          <h3 style="color: var(--green);">🛡️ Ativar Garantia e Faturar</h3>
+          <button class="secondary" id="btn-close-warranty-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="warranty-customization-form" style="margin-top: 10px; display: grid; gap: 12px;">
+          <label>Prazo de Garantia (Dias) *
+            <input type="number" id="warranty-days-input" required min="0" value="90" style="width: 100%;" />
+            <small style="display: block; opacity: 0.7; margin-top: 2px;">
+              Herdado: OS específica &gt; Tenant Branding &gt; Padrão Global (90 dias).
+            </small>
+          </label>
+          <label>Termos da Garantia
+            <textarea id="warranty-terms-input" style="width: 100%; height: 70px; font-size: 12px;" placeholder="Ex: Garantia total sobre peças e mão de obra contratadas..."></textarea>
+          </label>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end; display: flex; gap: 8px;">
+            <button class="secondary" type="button" id="btn-cancel-warranty">Cancelar</button>
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Confirmar e Faturar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Nova Categoria de Gastos -->
+    <div class="modal-overlay" id="category-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3 style="color: var(--accent);">💰 Nova categoria</h3>
+          <button class="secondary" id="btn-close-category-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="category-create-form" style="margin-top: 10px; display: grid; gap: 12px;">
+          <label>Nome *<input type="text" id="category-name-input" required placeholder="Ex: Alimentação" /></label>
+          <label>Ícone *</label>
+          <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;" id="category-icons-grid">
+            <!-- Preenchido dinamicamente -->
+          </div>
+          <label>Cor *</label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="category-colors-grid">
+            <!-- Preenchido dinamicamente -->
+          </div>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end;">
+            <button class="secondary" type="button" id="btn-cancel-category-creation">Cancelar</button>
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Criar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Registrar Gasto -->
+    <div class="modal-overlay" id="expense-create-modal" aria-hidden="true" style="z-index: 150;">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3 style="color: var(--accent);">💸 Registrar despesa</h3>
+          <button class="secondary" id="btn-close-expense-modal" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+        </header>
+        <form id="expense-create-form" style="margin-top: 10px; display: grid; gap: 12px;">
+          <label>Descrição *<input type="text" id="expense-description-input" required placeholder="Ex: Almoço da equipe" /></label>
+          <div class="inline">
+            <label>Valor (R$) *<input type="number" id="expense-value-input" required step="0.01" placeholder="Ex: 45.00" /></label>
+            <label>Data *<input type="date" id="expense-date-input" required /></label>
+          </div>
+          <label>Categoria *
+            <select id="expense-category-select" required>
+              <!-- Preenchido dinamicamente -->
+            </select>
+          </label>
+          <div class="actions" style="margin-top: 16px; justify-content: flex-end;">
+            <button class="secondary" type="button" id="btn-cancel-expense-creation">Cancelar</button>
+            <button class="primary" type="submit" style="background: var(--green); border-color: var(--green); color: #fff;">Registrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
     <nav class="bottom" aria-label="Navegacao principal">
       <button class="active" data-tab="home"><b>⌂</b><span>Home</span></button>
       <button data-tab="orders"><b>▣</b><span>OS</span></button>
       <button data-tab="agenda"><b>◇</b><span>Agenda</span></button>
       <button data-tab="finance"><b>$</b><span>Financeiro</span></button>
+      <button data-tab="tools"><b>🔧</b><span>Ferramentas</span></button>
       <button data-tab="ai"><b>✦</b><span>IA</span></button>
       <button data-tab="profile"><b>○</b><span>Perfil</span></button>
     </nav>
@@ -1342,7 +2412,7 @@ const html = String.raw`<!doctype html>
     <script>
       const apiBase = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
       const todayIso = new Date().toISOString().slice(0, 10);
-      const state = { organizations: [], assets: [], workOrders: [], appointments: [], activeOrganizationId: "", activeWorkOrderId: "", filter: "all", agendaMonth: todayIso.slice(0, 7), agendaDate: todayIso, user: { configured: false, tenantCode: "#00", accessLevel: "field_operator" }, formMaterials: [] };
+      const state = { organizations: [], assets: [], workOrders: [], appointments: [], activeOrganizationId: "", activeWorkOrderId: "", filter: "all", agendaMonth: todayIso.slice(0, 7), agendaDate: todayIso, user: { configured: false, tenantCode: "#00", accessLevel: "field_operator" }, formMaterials: [], viewMode: localStorage.getItem("atlas_view_mode") || "list" };
       let editingWorkOrderId = null;
       let pendingWorkOrderCustomerName = "";
 
@@ -1435,18 +2505,16 @@ const html = String.raw`<!doctype html>
         const customerName = String(name || "").trim();
         if (!customerName) return;
         hideCustomerSuggestions();
-        const ok = await showConfirm("Cliente ainda nao cadastrado", 'Nao encontrei "' + customerName + '". Deseja cadastrar esse cliente agora?');
-        if (!ok) {
-          el("work-order-customer-search").focus();
-          return;
+        
+        // Directly open the elegant quick drawer/modal inline
+        const nameInput = el("client-name-input");
+        if (nameInput) {
+          nameInput.value = customerName;
         }
-        pendingWorkOrderCustomerName = customerName;
-        navigate("admin");
-        const form = el("organization-form");
-        const nameInput = form.querySelector('[name="name"]');
-        nameInput.value = customerName;
-        form.scrollIntoView({ behavior: "smooth", block: "center" });
-        nameInput.focus();
+        el("client-create-modal").classList.add("open");
+        if (nameInput) {
+          setTimeout(() => nameInput.focus(), 150);
+        }
       }
 
       function activeWorkOrder() {
@@ -1491,7 +2559,7 @@ const html = String.raw`<!doctype html>
             state.user = profile || { configured: false, tenantCode: tenantParam || "#00", accessLevel: "field_operator" };
           }
         } catch (e) {
-          state.user = { configured: false, tenantCode: "#00", accessLevel: "field_operator" };
+          state.user = { configured: false, tenantCode: tenantParam || "#00", accessLevel: "field_operator" };
           console.warn("Could not load profile from backend:", e);
         }
 
@@ -1516,6 +2584,34 @@ const html = String.raw`<!doctype html>
           state.assets = [];
           state.workOrders = [];
           state.appointments = [];
+        }
+
+        // LOAD REAL DB DATA FOR EXPENSES & REGISTRIES
+        try {
+          state.materials = (await call("/materials")).items || [];
+          state.services = (await call("/services")).items || [];
+          state.expenses = (await call("/expenses")).items || [];
+          state.expenseCategories = (await call("/expense-categories")).items || [];
+
+          if (state.expenseCategories.length === 0) {
+            const defaults = [
+              { id: 'cat_1', name: 'Não definida', icon: '❓', color: '#607D8B' },
+              { id: 'cat_2', name: 'Material', icon: '🛠', color: '#4CAF50' },
+              { id: 'cat_3', name: 'Combustível', icon: '⛽', color: '#FF9800' },
+              { id: 'cat_4', name: 'Alimentação', icon: '🍔', color: '#E91E63' },
+              { id: 'cat_5', name: 'Transporte', icon: '🚗', color: '#2196F3' },
+              { id: 'cat_6', name: 'Ferramenta', icon: '🔧', color: '#FFEB3B' },
+              { id: 'cat_7', name: 'Equipamento', icon: '📦', color: '#9C27B0' },
+              { id: 'cat_8', name: 'Manutenção', icon: '⚙', color: '#795548' },
+              { id: 'cat_9', name: 'Outros', icon: '💬', color: '#9E9E9E' }
+            ];
+            for (const c of defaults) {
+              await call("/expense-categories", { method: "POST", body: JSON.stringify(c) });
+            }
+            state.expenseCategories = (await call("/expense-categories")).items || [];
+          }
+        } catch (err) {
+          console.warn("Could not sync registries with Postgres:", err);
         }
 
         render();
@@ -1594,6 +2690,39 @@ const html = String.raw`<!doctype html>
         if (nameInput) nameInput.value = name;
         const roleSelect = el("profile-user-role-select");
         if (roleSelect) roleSelect.value = role;
+
+        loadBranding();
+      }
+
+      async function loadBranding() {
+        try {
+          const tenantParam = new URLSearchParams(location.search).get("tenant") || localStorage.getItem("atlas_field_tenant") || "";
+          const queryParams = [];
+          if (tenantParam) queryParams.push("tenant=" + encodeURIComponent(tenantParam));
+          const queryString = queryParams.length ? "?" + queryParams.join("&") : "";
+
+          const branding = await call("/field/tenant-branding" + queryString);
+          if (branding) {
+            const emissorNameInput = el("branding-emissor-name-input");
+            if (emissorNameInput) emissorNameInput.value = branding.emissorName || "";
+            const brandTypeSelect = el("branding-brand-type-select");
+            if (brandTypeSelect) brandTypeSelect.value = branding.brandType || "AUTONOMO";
+            const logoUrlInput = el("branding-logo-url-input");
+            if (logoUrlInput) logoUrlInput.value = branding.logoUrl || "";
+            const phoneInput = el("branding-phone-input");
+            if (phoneInput) phoneInput.value = branding.phone || "";
+            const emailInput = el("branding-email-input");
+            if (emailInput) emailInput.value = branding.email || "";
+            const addressInput = el("branding-address-input");
+            if (addressInput) addressInput.value = branding.address || "";
+            const pixKeyInput = el("branding-pix-key-input");
+            if (pixKeyInput) pixKeyInput.value = branding.pixKey || "";
+            const warrantyTermsTextarea = el("branding-warranty-terms-textarea");
+            if (warrantyTermsTextarea) warrantyTermsTextarea.value = branding.warrantyTerms || "";
+          }
+        } catch (e) {
+          console.error("Could not load branding from backend:", e);
+        }
       }
 
       function renderOperationCards() {
@@ -1602,12 +2731,12 @@ const html = String.raw`<!doctype html>
         const cards = [
           { title: "Nova OS", detail: hasOrganization ? "Abrir ordem" : "Requer cliente", icon: "OS", tone: "blue", action: "work-order", enabled: hasOrganization },
           { title: "Orcamento", detail: hasWorkOrder ? "Preencher proposta" : "Requer OS selecionada", icon: "$", tone: "green", action: "budget", enabled: hasWorkOrder },
-          { title: "Clientes", detail: "Cadastrar cliente", icon: "CL", tone: "purple", action: "client", enabled: true },
+          { title: "Clientes", detail: "Cadastrar cliente", icon: "CL", tone: "blue", action: "client", enabled: true },
           { title: "Ativos", detail: hasOrganization ? "Cadastrar equipamento" : "Requer cliente", icon: "AT", tone: "blue", action: "admin", enabled: true },
           { title: "Financeiro", detail: "Calculado por OS aprovada", icon: "$", tone: "blue", action: "finance", enabled: true },
           { title: "Assistente IA", detail: hasWorkOrder ? "Usar OS selecionada" : "Requer OS selecionada", icon: "AI", tone: "orange", action: "ai", enabled: hasWorkOrder },
-          { title: "Estoque", detail: "Planejado: cadastro de pecas", icon: "PK", tone: "orange", action: "", enabled: false },
-          { title: "Agenda", detail: "Calendario e lembretes", icon: "AG", tone: "purple", action: "agenda", enabled: true },
+          { title: "Estoque", detail: "Insumos no porta-malas", icon: "PK", tone: "orange", action: "inventory", enabled: true },
+          { title: "Agenda", detail: "Calendario e lembretes", icon: "AG", tone: "orange", action: "agenda", enabled: true },
           { title: "Chamados", detail: totals().open + " OS abertas", icon: "!", tone: "orange", action: "orders", enabled: true }
         ];
         el("operation-cards").innerHTML = cards.map((card) =>
@@ -1819,40 +2948,239 @@ const html = String.raw`<!doctype html>
 
       function filteredOrders() {
         return state.workOrders.filter((wo) => {
-          if (state.filter === "open") return wo.state === "opened" || wo.state === "budget_submitted";
-          if (state.filter === "progress") return wo.state === "approved" || wo.state === "in_progress";
-          if (state.filter === "done") return wo.state === "closed";
+          if (state.filter === "open") return ["triage", "opened", "scheduled", "visited", "budget_draft", "budget_sent", "budget_submitted"].includes(wo.state);
+          if (state.filter === "progress") return ["approved", "accepted", "in_progress", "rework", "pending_acceptance"].includes(wo.state);
+          if (state.filter === "done") return ["invoiced", "warranty_active", "closed"].includes(wo.state);
+          
+          if (state.filter === "requested") return ["triage", "opened", "scheduled", "requested"].includes(wo.state);
+          if (state.filter === "budget_sent") return ["visited", "budget_draft", "budget_sent", "budget_submitted", "budget_rejected"].includes(wo.state);
+          if (state.filter === "approved") return ["approved", "accepted"].includes(wo.state);
+          if (state.filter === "in_progress") return ["in_progress", "rework", "pending_acceptance"].includes(wo.state);
+          if (state.filter === "closed") return ["invoiced", "warranty_active", "closed"].includes(wo.state);
+          if (state.filter === "cancelled") return wo.state === "cancelled";
           return true;
         });
       }
 
       function stateBadge(wo) {
-        if (wo.state === "closed") return '<span class="badge done">Concluida</span>';
-        if (wo.state === "approved" || wo.state === "in_progress") return '<span class="badge progress">Em andamento</span>';
-        return '<span class="badge">Em aberto</span>';
+        if (wo.state === "closed" || wo.state === "invoiced") return '<span class="badge done">Concluída</span>';
+        if (wo.state === "warranty_active") return '<span class="badge done" style="background: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.25) !important;">Garantia Ativa</span>';
+        if (wo.state === "approved" || wo.state === "accepted") return '<span class="badge progress" style="background: rgba(0, 240, 192, 0.1) !important; color: #00f0c0 !important; border: 1px solid rgba(0, 240, 192, 0.25) !important;">Aprovada</span>';
+        if (wo.state === "in_progress" || wo.state === "rework" || wo.state === "pending_acceptance") return '<span class="badge progress">Execução</span>';
+        if (["budget_sent", "budget_submitted", "budget_draft", "visited", "budget_rejected"].includes(wo.state)) return '<span class="badge" style="background: rgba(234, 179, 8, 0.1) !important; color: #eab308 !important; border: 1px solid rgba(234, 179, 8, 0.25) !important;">Negociação</span>';
+        if (wo.state === "cancelled") return '<span class="badge done" style="background: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.25) !important;">Cancelada</span>';
+        return '<span class="badge">Pendente</span>';
       }
 
-      function renderWorkOrders() {
-        el("work-order-list").innerHTML = filteredOrders().map((wo) => {
-          const asset = state.assets.find((item) => item.id === wo.assetId);
-          const selected = wo.id === state.activeWorkOrderId ? " selected" : "";
-          const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
-          return '<button class="order-card' + selected + '" data-wo="' + wo.id + '"><span class="order-head"><strong>' + htmlEscape(displayName) + '</strong>' + stateBadge(wo) + '</span><p>Cliente: ' + htmlEscape(activeOrganization()?.name || "") + '</p><p>Equipamento: ' + htmlEscape(asset?.name || wo.assetId) + '</p><p>' + htmlEscape(wo.dueAt || "Sem prazo definido") + '</p></button>';
-        }).join("") || '<div class="slot"><strong>Nenhuma OS encontrada.</strong><small>Use o botao + para criar a primeira ordem.</small></div>';
+      async function handleKanbanDrop(workOrderId, targetColId) {
+        state.activeWorkOrderId = workOrderId;
+        const wo = state.workOrders.find(w => w.id === workOrderId);
+        if (!wo) return;
+        
+        // Exibir os detalhes da OS na barra lateral
+        await refreshTimeline();
+        render();
 
-        document.querySelectorAll("[data-wo]").forEach((row) => {
-          row.addEventListener("click", async () => {
-            state.activeWorkOrderId = row.getAttribute("data-wo") || "";
+        try {
+          if (targetColId === "entrada") {
+            if (wo.state === "triage") {
+              await triggerStageTransition("opened", { notes: "OS triada e aberta formalmente via Kanban." });
+              showToast("Transição Efetuada", "OS movida para Aberta.", "success");
+            } else {
+              showToast("Aviso", "Esta OS já está aberta ou em estágio mais avançado.", "info");
+            }
+          } else if (targetColId === "diagnostico") {
+            if (["triage", "opened"].includes(wo.state)) {
+              await triggerStageTransition("scheduled", { notes: "OS agendada para visita in loco via Kanban." });
+              showToast("Transição Efetuada", "OS movida para Agendada.", "success");
+            } else {
+              showToast("Aviso", "Esta OS já passou da fase de diagnóstico ou agendamento.", "info");
+            }
+          } else if (targetColId === "orcamento") {
+            // Verificar se o orçamento foi composto
+            const hasAmount = wo.budget && wo.budget.amount > 0;
+            if (!hasAmount) {
+              showToast("Orçamento Necessário", "Componha os custos e materiais da OS primeiro.", "warning");
+              el("submit-budget")?.click();
+            } else if (wo.state === "budget_draft" || wo.state === "visited") {
+              await triggerStageTransition("budget_sent", { notes: "Orçamento oficial enviado para aprovação via Kanban." });
+              showToast("Transição Efetuada", "Orçamento enviado.", "success");
+            }
+          } else if (targetColId === "aprovado") {
+            if (wo.state === "budget_sent") {
+              await triggerStageTransition("approved", { notes: "Orçamento aprovado via Kanban." });
+              showToast("Transição Efetuada", "OS aprovada para planejamento.", "success");
+            } else {
+              showToast("Aviso", "A OS precisa estar com orçamento enviado para ser aprovada.", "warning");
+            }
+          } else if (targetColId === "execucao") {
+            if (["approved", "rework"].includes(wo.state)) {
+              await triggerStageTransition("in_progress", { notes: "Execução de serviços iniciada via Kanban." });
+              showToast("Transição Efetuada", "OS em execução.", "success");
+            } else {
+              showToast("Aviso", "A OS precisa ser aprovada ou estar em retrabalho para iniciar execução.", "warning");
+            }
+          } else if (targetColId === "aceite") {
+            if (wo.state === "in_progress") {
+              if (!wo.laudoFinal) {
+                showToast("Laudo Requerido", "Preencha o laudo técnico final para solicitar o aceite.", "warning");
+                el("aside-tab-laudo")?.click();
+              } else {
+                await triggerStageTransition("pending_acceptance", { notes: "Execução concluída. Aguardando aceite formal." });
+                showToast("Transição Efetuada", "OS aguardando aceite.", "success");
+              }
+            } else if (wo.state === "pending_acceptance") {
+              showToast("Assinatura Requerida", "Abra a coleta de aceite para assinar.", "info");
+              el("approve-budget")?.click();
+            }
+          } else if (targetColId === "financeiro") {
+            if (wo.state === "accepted") {
+              el("close-work")?.click();
+            } else {
+              showToast("Bloqueado", "A OS precisa ter aceite formal do cliente para ser faturada.", "warning");
+            }
+          } else if (targetColId === "concluido") {
+            if (wo.state === "warranty_active") {
+              await triggerStageTransition("closed", { notes: "OS operacionalmente encerrada e arquivada." });
+              showToast("Sucesso", "OS concluída e arquivada.", "success");
+            } else {
+              showToast("Bloqueado", "A OS precisa estar com a garantia ativa para ser arquivada/concluída.", "warning");
+            }
+          }
+        } catch (err) {
+          showToast("Erro na transição", err.message, "error");
+        }
+      }
+
+      function renderKanbanBoard() {
+        const boardEl = el("work-order-kanban-board");
+        if (!boardEl) return;
+
+        const columns = [
+          { id: "entrada", name: "Entrada", states: ["triage", "opened"] },
+          { id: "diagnostico", name: "Diagnóstico", states: ["scheduled", "visited"] },
+          { id: "orcamento", name: "Orçamento", states: ["budget_draft", "budget_sent", "budget_rejected"] },
+          { id: "aprovado", name: "Aprovado", states: ["approved"] },
+          { id: "execucao", name: "Execução", states: ["in_progress", "rework"] },
+          { id: "aceite", name: "Aceite", states: ["pending_acceptance", "accepted"] },
+          { id: "financeiro", name: "Financeiro / Garantia", states: ["invoiced", "warranty_active"] },
+          { id: "concluido", name: "Concluído", states: ["closed", "cancelled"] }
+        ];
+
+        boardEl.innerHTML = columns.map(col => {
+          const colOrders = state.workOrders.filter(wo => col.states.includes(wo.state));
+          
+          const cardsHtml = colOrders.map(wo => {
+            const asset = state.assets.find(item => item.id === wo.assetId);
+            const isSelected = wo.id === state.activeWorkOrderId ? " selected" : "";
+            const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
+            
+            // Build mini badges
+            const badges = [];
+            if (!wo.laudoInicial) {
+              badges.push('<span class="mini-badge" style="background: rgba(239, 68, 68, 0.15); color: #ff5a65; border: 1px solid rgba(239, 68, 68, 0.25);">sem laudo</span>');
+            }
+            if (wo.state === "rework") {
+              badges.push('<span class="mini-badge" style="background: rgba(255, 90, 101, 0.15); color: #ff5a65; border: 1px solid rgba(255, 90, 101, 0.25);">retrabalho</span>');
+            }
+            if (wo.state === "warranty_active") {
+              badges.push('<span class="mini-badge" style="background: rgba(40, 215, 120, 0.15); color: #28d778; border: 1px solid rgba(40, 215, 120, 0.25);">garantia ativa</span>');
+            }
+            if (wo.state === "budget_sent") {
+              badges.push('<span class="mini-badge" style="background: rgba(255, 159, 26, 0.15); color: var(--amber); border: 1px solid rgba(255, 159, 26, 0.25);">aguardando retorno</span>');
+            }
+            if (wo.state === "pending_acceptance") {
+              badges.push('<span class="mini-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.25);">aceite pendente</span>');
+            }
+            if (wo.budget?.version) {
+              badges.push('<span class="mini-badge" style="background: rgba(255, 255, 255, 0.08); color: #fff;">V' + wo.budget.version + '</span>');
+            }
+
+            return '<div class="kanban-card' + isSelected + '" draggable="true" data-wo-id="' + wo.id + '">' +
+              '<div class="kanban-card-title">' + htmlEscape(displayName) + '</div>' +
+              '<div class="kanban-card-info" style="font-weight: bold; color: var(--text);">' + htmlEscape(wo.title) + '</div>' +
+              '<div class="kanban-card-info">Cliente: ' + htmlEscape(activeOrganization()?.name || "") + '</div>' +
+              '<div class="kanban-badges">' + badges.join("") + '</div>' +
+              '</div>';
+          }).join("");
+
+          return '<div class="kanban-col" data-col-id="' + col.id + '">' +
+            '<div class="kanban-col-header">' +
+              '<span>' + col.name + '</span>' +
+              '<span class="kanban-col-count">' + colOrders.length + '</span>' +
+            '</div>' +
+            '<div class="kanban-col-cards">' + cardsHtml + '</div>' +
+            '</div>';
+        }).join("");
+
+        // Setup Drag & Drop Event Listeners
+        document.querySelectorAll(".kanban-card").forEach(card => {
+          card.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", card.getAttribute("data-wo-id"));
+            card.style.opacity = "0.5";
+          });
+          card.addEventListener("dragend", () => {
+            card.style.opacity = "1";
+          });
+          card.addEventListener("click", async () => {
+            state.activeWorkOrderId = card.getAttribute("data-wo-id");
             await refreshTimeline();
             render();
           });
         });
+
+        document.querySelectorAll(".kanban-col").forEach(col => {
+          col.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            col.classList.add("drag-hover");
+          });
+          col.addEventListener("dragleave", () => {
+            col.classList.remove("drag-hover");
+          });
+          col.addEventListener("drop", async (e) => {
+            e.preventDefault();
+            col.classList.remove("drag-hover");
+            const workOrderId = e.dataTransfer.getData("text/plain");
+            const targetColId = col.getAttribute("data-col-id");
+            if (workOrderId && targetColId) {
+              await handleKanbanDrop(workOrderId, targetColId);
+            }
+          });
+        });
+      }
+
+      function renderWorkOrders() {
+        if (state.viewMode === "kanban") {
+          el("view-mode-list").style.display = "none";
+          el("view-mode-kanban").style.display = "flex";
+          el("btn-toggle-kanban").textContent = "📋 Ver Lista";
+          renderKanbanBoard();
+        } else {
+          el("view-mode-list").style.display = "flex";
+          el("view-mode-kanban").style.display = "none";
+          el("btn-toggle-kanban").textContent = "📋 Ver Kanban";
+
+          el("work-order-list").innerHTML = filteredOrders().map((wo) => {
+            const asset = state.assets.find((item) => item.id === wo.assetId);
+            const selected = wo.id === state.activeWorkOrderId ? " selected" : "";
+            const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
+            return '<button class="order-card' + selected + '" data-wo="' + wo.id + '"><span class="order-head"><strong>' + htmlEscape(displayName) + '</strong>' + stateBadge(wo) + '</span><p>Cliente: ' + htmlEscape(activeOrganization()?.name || "") + '</p><p>Equipamento: ' + htmlEscape(asset?.name || wo.assetId) + '</p><p>' + htmlEscape(wo.dueAt || "Sem prazo definido") + '</p></button>';
+          }).join("") || '<div class="slot"><strong>Nenhuma OS encontrada.</strong><small>Use o botao + para criar a primeira ordem.</small></div>';
+
+          document.querySelectorAll("[data-wo]").forEach((row) => {
+            row.addEventListener("click", async () => {
+              state.activeWorkOrderId = row.getAttribute("data-wo") || "";
+              await refreshTimeline();
+              render();
+            });
+          });
+        }
       }
 
       function renderSelectedWorkOrder() {
         const wo = activeWorkOrder();
         const hasWorkOrder = Boolean(wo);
-        ["attach-evidence", "diagnosis-agent", "budget-agent", "submit-budget", "approve-budget", "start-work", "close-work", "edit-work-order", "cancel-work-order", "delete-work-order"].forEach((id) => {
+        ["attach-evidence", "diagnosis-agent", "budget-agent", "submit-budget", "approve-budget", "start-work", "close-work", "rework-work", "edit-work-order", "cancel-work-order", "delete-work-order"].forEach((id) => {
           const button = el(id);
           if (button) button.disabled = !hasWorkOrder;
         });
@@ -1860,6 +3188,28 @@ const html = String.raw`<!doctype html>
           const isDoneOrCancelled = wo.state === "closed" || wo.state === "cancelled";
           if (el("edit-work-order")) el("edit-work-order").disabled = isDoneOrCancelled;
           if (el("cancel-work-order")) el("cancel-work-order").disabled = isDoneOrCancelled;
+
+          // Controlling action buttons visibility based on state
+          const submitBudgetBtn = el("submit-budget");
+          const approveBudgetBtn = el("approve-budget");
+          const startWorkBtn = el("start-work");
+          const closeWorkBtn = el("close-work");
+          const reworkWorkBtn = el("rework-work");
+          
+          const setDisplay = (btn, show) => {
+            if (btn) btn.style.display = show ? "block" : "none";
+          };
+          
+          setDisplay(submitBudgetBtn, ["triage", "opened", "scheduled", "visited", "budget_draft", "budget_rejected"].includes(wo.state));
+          setDisplay(startWorkBtn, ["approved", "rework"].includes(wo.state));
+          setDisplay(approveBudgetBtn, ["pending_acceptance"].includes(wo.state));
+          setDisplay(reworkWorkBtn, ["pending_acceptance"].includes(wo.state));
+          setDisplay(closeWorkBtn, ["accepted", "invoiced", "warranty_active"].includes(wo.state));
+        } else {
+          ["submit-budget", "approve-budget", "start-work", "close-work", "rework-work"].forEach(id => {
+            const btn = el(id);
+            if (btn) btn.style.display = "none";
+          });
         }
         el("work-order-form").querySelector('button[type="submit"]').disabled = !state.activeOrganizationId;
         if (!wo) {
@@ -1867,10 +3217,47 @@ const html = String.raw`<!doctype html>
             ? "Abra uma OS para liberar evidencia, IA, orcamento e execucao. Se nao houver ativo, eu crio um atendimento geral automaticamente."
             : "Cadastre ou selecione um cliente para abrir a primeira OS.";
           el("selected-state").textContent = "Aguardando";
+          if (el('view-laudo-btn')) el('view-laudo-btn').disabled = true;
+          if (el('share-whatsapp-btn')) el('share-whatsapp-btn').disabled = true;
+          if (el('view-recibo-btn')) el('view-recibo-btn').disabled = true;
+          const laudoInicialInput = el("laudo-inicial-input");
+          if (laudoInicialInput) laudoInicialInput.value = "";
+          const laudoFinalInput = el("laudo-final-input");
+          if (laudoFinalInput) laudoFinalInput.value = "";
+          const laudoGarantiaInput = el("laudo-garantia-input");
+          if (laudoGarantiaInput) laudoGarantiaInput.value = "90";
           return;
         }
+        const laudoInicialInput = el("laudo-inicial-input");
+        if (laudoInicialInput) laudoInicialInput.value = wo.laudoInicial || "";
+        const laudoFinalInput = el("laudo-final-input");
+        if (laudoFinalInput) laudoFinalInput.value = wo.laudoFinal || "";
+        const laudoGarantiaInput = el("laudo-garantia-input");
+        if (laudoGarantiaInput) laudoGarantiaInput.value = String(wo.validadeGarantiaDias || 90);
+
         const materials = (wo.materials || []).map((item) => item.name + " x" + item.quantity + " = " + money(item.totalPrice)).join("<br>");
         el("selected-state").textContent = wo.state;
+
+        // ENABLE LAUDO & WHATSAPP BUTTONS
+        const viewLaudoBtn = el('view-laudo-btn');
+        const shareWhatsappBtn = el('share-whatsapp-btn');
+        if (viewLaudoBtn) viewLaudoBtn.disabled = false;
+        if (shareWhatsappBtn) shareWhatsappBtn.disabled = false;
+        if (el('view-recibo-btn')) el('view-recibo-btn').disabled = false;
+
+        // PREVIEW STORED PHOTOS IN FORM
+        const storedBefore = (wo.evidence || []).find(e => e.type === 'before');
+        const storedAfter = (wo.evidence || []).find(e => e.type === 'after');
+        if (storedBefore && el('preview-photo-before')) {
+          el('preview-photo-before').style.display = 'block';
+          el('preview-photo-before').querySelector('img').src = storedBefore.url;
+          photoBeforeBase64 = storedBefore.url;
+        }
+        if (storedAfter && el('preview-photo-after')) {
+          el('preview-photo-after').style.display = 'block';
+          el('preview-photo-after').querySelector('img').src = storedAfter.url;
+          photoAfterBase64 = storedAfter.url;
+        }
         const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
 
         const org = activeOrganization();
@@ -1880,7 +3267,64 @@ const html = String.raw`<!doctype html>
             (org.address ? "<small style='display: block;'>Endereço: " + htmlEscape(org.address) + "</small>" : "")
           : "<small style='display: block; margin-top: 4px;'>Cliente: não definido</small>";
 
+        function renderFlowTrail(w) {
+          const st = w.state;
+          const stages = [
+            { key: "triage", name: "Triagem" },
+            { key: "opened", name: "Aberta" },
+            { key: "scheduled", name: "Agendada" },
+            { key: "visited", name: "Visita Realizada" },
+            { key: "budget_draft", name: "Orç. Rascunho" },
+            { key: "budget_sent", name: "Orç. Enviado" },
+            { key: "budget_rejected", name: "Orç. Recusado" },
+            { key: "approved", name: "Aprovada" },
+            { key: "in_progress", name: "Em Execução" },
+            { key: "rework", name: "Retrabalho" },
+            { key: "pending_acceptance", name: "Aceite Pendente" },
+            { key: "accepted", name: "Aceita" },
+            { key: "invoiced", name: "Faturada" },
+            { key: "warranty_active", name: "Garantia Ativa" },
+            { key: "closed", name: "Encerrada" },
+            { key: "cancelled", name: "Cancelada" }
+          ];
+
+          const events = (state.activeWorkOrderDetails && state.activeWorkOrderDetails.stageEvents) || [];
+
+          return '<div class="flow-trail" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:14px; font-size:9px; background:var(--bg); padding:8px; border-radius:8px; border:1px solid var(--line); font-weight:bold; overflow-x:auto; gap:6px; max-width:100%; scrollbar-width: none;">' +
+            stages.map((s, idx) => {
+              const isCurrent = s.key === st;
+              const stageEvent = [...events].reverse().find(e => e.to_stage === s.key);
+              const isPast = stageEvent !== undefined;
+              const isPastOrCurrent = isCurrent || isPast;
+              
+              let tooltipHtml = "";
+              if (isCurrent) {
+                tooltipHtml = '<div class="tooltip-popover"><strong>⚡ Etapa Atual</strong><span>A OS encontra-se neste estágio operacional ativo.</span></div>';
+              } else if (isPast) {
+                const dateStr = new Date(stageEvent.occurred_at || stageEvent.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                tooltipHtml = '<div class="tooltip-popover"><strong>✅ ' + s.name + '</strong>' +
+                  '<span>📅 Data: ' + dateStr + '</span>' +
+                  '<span>👤 Por: ' + htmlEscape(stageEvent.actor_name || "Sistema") + '</span>' +
+                  (stageEvent.notes ? '<span>💬 Obs: ' + htmlEscape(stageEvent.notes) + '</span>' : '') +
+                  '</div>';
+              } else {
+                tooltipHtml = '<div class="tooltip-popover"><strong>⏳ ' + s.name + '</strong><span>Etapa futura do funil operacional (não iniciada).</span></div>';
+              }
+
+              const chipIcon = isCurrent ? "⚡" : isPast ? "✅" : "⏳";
+              const color = isCurrent ? "var(--amber)" : isPast ? "var(--accent)" : "var(--text-soft)";
+              const opacity = isCurrent ? "1" : isPast ? "0.9" : "0.45";
+              const border = isCurrent ? "1px solid var(--amber)" : isPast ? "1px solid var(--accent)" : "1px solid rgba(73, 180, 232, 0.15)";
+              const bg = isCurrent ? "rgba(255, 159, 26, 0.08)" : isPast ? "rgba(0, 240, 192, 0.04)" : "transparent";
+              const arrow = idx < stages.length - 1 ? '<span style="opacity:0.25; font-size:7px;">➔</span>' : '';
+              return '<span class="trail-chip" style="color:' + color + '; opacity:' + opacity + '; border:' + border + '; padding:3px 6px; border-radius:4px; background:' + bg + '; white-space:nowrap; cursor:help; position:relative;">' + 
+                chipIcon + ' ' + s.name + tooltipHtml + '</span>' + arrow;
+            }).join("") +
+          '</div>';
+        }
+
         el("selected-work-order").innerHTML =
+          renderFlowTrail(wo) +
           "<h4 style='margin:0; font-size: 15px; color: var(--text);'>" + htmlEscape(displayName) + " - " + htmlEscape(wo.title) + "</h4>" +
           "<small class='audit-key' style='display: block; opacity: 0.65; font-size: 11px; margin: 4px 0 8px;'>Chave de auditoria: " + htmlEscape(wo.id) + "</small>" +
           clientHtml +
@@ -1902,19 +3346,14 @@ const html = String.raw`<!doctype html>
       }
 
       function renderFinance() {
-        const data = totals();
-        el("finance-metrics").innerHTML = [
-          ["Caixa previsto", money(data.margin), "accent"],
-          ["Receita aprovada", money(data.revenue), ""],
-          ["Custo aberto", money(data.cost), ""],
-          ["OS abertas", data.open, "accent"]
-        ].map((item) => '<div class="metric"><strong class="' + item[2] + '">' + htmlEscape(item[1]) + '</strong><span>' + item[0] + '</span></div>').join("");
-        el("cashflow").innerHTML = [
-          ["Entradas", money(data.revenue)],
-          ["Saídas", money(data.cost)],
-          ["Saldo operacional", money(data.margin)]
-        ].map((item) => '<div class="slot"><strong>' + item[0] + '</strong><small>' + item[1] + '</small></div>').join("");
-        el("billing-total").textContent = money(data.revenue);
+        try {
+          populateExpenseMonthFilter();
+          renderCategoriesGrid();
+          const filter = el('expense-month-filter');
+          renderExpensesLedger(filter ? filter.value : todayIso.slice(0, 7));
+        } catch (err) {
+          console.warn("Error rendering finance tab on load:", err);
+        }
       }
 
       function renderAgentCards() {
@@ -1928,7 +3367,15 @@ const html = String.raw`<!doctype html>
       async function refreshTimeline() {
         if (!state.activeOrganizationId || !state.activeWorkOrderId) {
           el("timeline").innerHTML = '<div class="slot"><strong>Sem OS selecionada.</strong></div>';
+          state.activeWorkOrderDetails = null;
           return;
+        }
+        try {
+          const details = await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "?organizationId=" + encodeURIComponent(state.activeOrganizationId));
+          state.activeWorkOrderDetails = details;
+        } catch (err) {
+          console.warn("Erro ao buscar detalhes da OS:", err);
+          state.activeWorkOrderDetails = null;
         }
         const data = await call("/timeline?organizationId=" + encodeURIComponent(state.activeOrganizationId) + "&subjectId=" + encodeURIComponent(state.activeWorkOrderId));
         el("timeline").innerHTML = (data.items || []).map((entry) => '<div class="slot"><strong>' + htmlEscape(entry.title) + '</strong><small>' + htmlEscape(entry.eventName) + " - " + htmlEscape(entry.occurredAt) + '</small><small>' + htmlEscape(entry.body || "") + '</small></div>').join("") || '<div class="slot"><strong>Timeline vazia.</strong></div>';
@@ -2060,16 +3507,46 @@ const html = String.raw`<!doctype html>
       }
 
       document.addEventListener("click", async (event) => {
+        // Backdrop click to close modals
+        if (event.target.classList.contains("modal-overlay")) {
+          event.target.classList.remove("open");
+          if (event.target.id === "work-order-modal") {
+            resetWorkOrderForm();
+          }
+        }
+
+        // Close button click to close modals
+        const closeBtn = event.target.closest('[id^="btn-close-"], #modal-close-btn, #confirm-modal-cancel-btn');
+        if (closeBtn) {
+          const modal = closeBtn.closest(".modal-overlay");
+          if (modal) {
+            modal.classList.remove("open");
+            if (modal.id === "work-order-modal") {
+              resetWorkOrderForm();
+            }
+          }
+        }
+
         const tab = event.target.closest("[data-tab]");
         if (tab) navigate(tab.dataset.tab);
 
         const quick = event.target.closest("[data-quick]");
         if (quick) {
           const action = quick.dataset.quick;
-          if (action === "work-order") navigate("orders");
+          if (action === "work-order") {
+            navigate("orders");
+            resetWorkOrderForm();
+            const modalTitle = el('work-order-modal-title');
+            if (modalTitle) modalTitle.textContent = "🛠 Criar Nova Ordem de Serviço";
+            const submitBtn = el('work-order-submit-btn');
+            if (submitBtn) submitBtn.textContent = "Abrir OS";
+            const modal = el('work-order-modal');
+            if (modal) modal.classList.add('open');
+          }
           if (action === "budget") { navigate("orders"); document.forms["budget-form"].scrollIntoView({ behavior: "smooth", block: "center" }); }
           if (action === "client" || action === "admin") navigate("admin");
           if (action === "finance") navigate("finance");
+          if (action === "inventory") navigate("inventory");
           if (action === "ai") navigate("ai");
           if (action === "agenda") navigate("agenda");
         }
@@ -2084,6 +3561,12 @@ const html = String.raw`<!doctype html>
             el("agent-output").textContent = JSON.stringify(data, null, 2);
           }
         }
+      });
+
+      el("btn-toggle-kanban")?.addEventListener("click", () => {
+        state.viewMode = state.viewMode === "kanban" ? "list" : "kanban";
+        localStorage.setItem("atlas_view_mode", state.viewMode);
+        renderWorkOrders();
       });
 
       document.querySelectorAll("[data-filter]").forEach((button) => {
@@ -2132,6 +3615,35 @@ const html = String.raw`<!doctype html>
           showToast("Perfil atualizado", "Informações salvas com sucesso.", "success");
         } catch (error) {
           showToast("Erro", "Erro ao salvar perfil no servidor: " + error.message, "error");
+        }
+      });
+
+      el("branding-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const data = Object.fromEntries(new FormData(form).entries());
+        try {
+          const tenantParam = new URLSearchParams(location.search).get("tenant") || localStorage.getItem("atlas_field_tenant") || "";
+          const queryParams = [];
+          if (tenantParam) queryParams.push("tenant=" + encodeURIComponent(tenantParam));
+          const queryString = queryParams.length ? "?" + queryParams.join("&") : "";
+
+          await call("/field/tenant-branding" + queryString, {
+            method: "POST",
+            body: JSON.stringify({
+              emissorName: data.emissorName,
+              brandType: data.brandType,
+              logoUrl: data.logoUrl,
+              phone: data.phone,
+              email: data.email,
+              address: data.address,
+              pixKey: data.pixKey,
+              warrantyTerms: data.warrantyTerms
+            })
+          });
+          showToast("Branding atualizado", "Identidade do recibo salva com sucesso.", "success");
+        } catch (error) {
+          showToast("Erro", "Erro ao salvar identidade de recibo: " + error.message, "error");
         }
       });
 
@@ -2290,11 +3802,75 @@ const html = String.raw`<!doctype html>
         });
       }
 
+
+      function setModalMode(mode) {
+        const modal = el("work-order-modal");
+        if (!modal) return;
+        const layout = el("wo-modal-layout") || modal.querySelector(".orders-layout");
+        if (layout) {
+          layout.id = "wo-modal-layout";
+        }
+        const woForm = el("work-order-form");
+        const budgetForm = el("budget-form");
+        
+        const photosDiv = woForm.querySelector("div[style*='grid-template-columns']");
+        const estimatedDurationLabel = woForm.querySelector("input[name='estimatedDurationHours']")?.closest("label");
+        const laborRateLabel = woForm.querySelector("input[name='laborRate']")?.closest(".inline") || woForm.querySelector("input[name='laborRate']")?.closest("label");
+        const diagnosisLabel = woForm.querySelector("textarea[name='diagnosis']")?.closest("label");
+        const materialsDiv = woForm.querySelector(".materials-builder");
+        
+        if (photosDiv) photosDiv.classList.add("photos-section");
+        if (materialsDiv) materialsDiv.classList.add("materials-section");
+        if (estimatedDurationLabel) estimatedDurationLabel.classList.add("duration-section");
+        if (laborRateLabel) laborRateLabel.classList.add("labor-section");
+        if (diagnosisLabel) diagnosisLabel.classList.add("diagnosis-section");
+        
+        const materialsBuilder = woForm.querySelector(".materials-section") || budgetForm.querySelector(".materials-section");
+        
+        if (mode === "create" || mode === "edit") {
+          if (layout) layout.style.gridTemplateColumns = "1fr";
+          woForm.style.display = "block";
+          budgetForm.style.display = "none";
+          
+          if (materialsBuilder && woForm) {
+            const inlineSection = woForm.querySelector(".labor-section") || woForm.querySelector("#work-order-form-actions");
+            woForm.insertBefore(materialsBuilder, inlineSection);
+          }
+          
+          if (photosDiv) photosDiv.style.display = "none";
+          if (materialsDiv) materialsDiv.style.display = "none";
+          if (estimatedDurationLabel) estimatedDurationLabel.style.display = "none";
+          if (laborRateLabel) laborRateLabel.style.display = "none";
+          if (diagnosisLabel) diagnosisLabel.style.display = "none";
+        } else if (mode === "budget") {
+          if (layout) layout.style.gridTemplateColumns = "1fr";
+          woForm.style.display = "none";
+          budgetForm.style.display = "block";
+          
+          let budgetMaterialsContainer = el("budget-materials-container");
+          if (!budgetMaterialsContainer) {
+            budgetMaterialsContainer = document.createElement("div");
+            budgetMaterialsContainer.id = "budget-materials-container";
+            budgetForm.insertBefore(budgetMaterialsContainer, budgetForm.firstChild);
+          }
+          
+          if (materialsBuilder) {
+            budgetMaterialsContainer.appendChild(materialsBuilder);
+            materialsBuilder.style.display = "block";
+          }
+        }
+      }
+
       function startEditWorkOrder(wo) {
         if (!wo) return;
         editingWorkOrderId = wo.id;
         const form = el("work-order-form");
-        form.querySelector('.panel-title h3').textContent = "Editar ordem de serviço";
+        const modalTitle = el('work-order-modal-title');
+        if (modalTitle) modalTitle.textContent = "🛠 Editar Ordem de Serviço";
+        else {
+          const h3 = form.querySelector('.panel-title h3');
+          if (h3) h3.textContent = "Editar ordem de serviço";
+        }
         el("work-order-submit-btn").textContent = "Salvar Alterações";
         el("work-order-cancel-btn").style.display = "block";
         
@@ -2325,6 +3901,7 @@ const html = String.raw`<!doctype html>
         state.formMaterials = JSON.parse(JSON.stringify(wo.materials || []));
         renderFormMaterials();
         
+        setModalMode("edit");
         form.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
@@ -2332,13 +3909,53 @@ const html = String.raw`<!doctype html>
         editingWorkOrderId = null;
         const form = el("work-order-form");
         form.reset();
-        form.querySelector('.panel-title h3').textContent = "Nova ordem de serviço";
+        const modalTitle = el('work-order-modal-title');
+        if (modalTitle) modalTitle.textContent = "🛠 Criar Nova Ordem de Serviço";
+        else {
+          const h3 = form.querySelector('.panel-title h3');
+          if (h3) h3.textContent = "Nova ordem de serviço";
+        }
         el("work-order-submit-btn").textContent = "Abrir OS";
         el("work-order-cancel-btn").style.display = "none";
         state.formMaterials = [];
         renderFormMaterials();
         renderSelectors();
+        setModalMode("create");
       }
+
+      // ANTES / DEPOIS LIVE PREVIEWS (IN LAUDO TAB)
+      let laudoPhotoBeforeBase64 = "";
+      let laudoPhotoAfterBase64 = "";
+
+      el('laudo-photo-before')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          laudoPhotoBeforeBase64 = evt.target.result;
+          const container = el('laudo-preview-before');
+          if (container) {
+            container.style.display = 'block';
+            container.querySelector('img').src = laudoPhotoBeforeBase64;
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      el('laudo-photo-after')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          laudoPhotoAfterBase64 = evt.target.result;
+          const container = el('laudo-preview-after');
+          if (container) {
+            container.style.display = 'block';
+            container.querySelector('img').src = laudoPhotoAfterBase64;
+          }
+        };
+        reader.readAsDataURL(file);
+      });
 
       el("work-order-form").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -2347,21 +3964,45 @@ const html = String.raw`<!doctype html>
         
         try {
           const assetId = await ensureAssetForWorkOrder(data.title);
-          const payload = {
-            organizationId: state.activeOrganizationId,
-            assetId,
-            title: data.title,
-            description: data.description,
-            technicianName: data.technicianName,
-            priority: data.priority,
-            dueAt: data.dueAt ? new Date(String(data.dueAt)).toISOString() : undefined,
-            diagnosis: data.diagnosis,
-            estimatedDurationHours: asNumber(data.estimatedDurationHours),
-            laborHours: asNumber(data.laborHours),
-            laborRate: asNumber(data.laborRate),
-            sequenceNumber: data.sequenceNumber,
-            materials: state.formMaterials || []
-          };
+          
+          let payload;
+          if (editingWorkOrderId) {
+            const wo = activeWorkOrder() || {};
+            payload = {
+              organizationId: state.activeOrganizationId,
+              assetId,
+              title: data.title,
+              description: data.description,
+              technicianName: data.technicianName,
+              priority: data.priority,
+              dueAt: data.dueAt ? new Date(String(data.dueAt)).toISOString() : undefined,
+              sequenceNumber: data.sequenceNumber,
+              // Retain technical, budget, and evidence fields without changes
+              materials: wo.materials || [],
+              evidence: wo.evidence || [],
+              diagnosis: wo.diagnosis,
+              laborHours: wo.laborHours,
+              laborRate: wo.laborRate,
+              estimatedDurationHours: wo.estimatedDurationHours
+            };
+          } else {
+            payload = {
+              organizationId: state.activeOrganizationId,
+              assetId,
+              title: data.title,
+              description: data.description,
+              technicianName: data.technicianName,
+              priority: data.priority,
+              dueAt: data.dueAt ? new Date(String(data.dueAt)).toISOString() : undefined,
+              sequenceNumber: data.sequenceNumber,
+              materials: [],
+              evidence: [],
+              diagnosis: "",
+              laborHours: null,
+              laborRate: null,
+              estimatedDurationHours: null
+            };
+          }
 
           if (editingWorkOrderId) {
             await call("/maintenance/work-orders/" + encodeURIComponent(editingWorkOrderId) + "?organizationId=" + encodeURIComponent(state.activeOrganizationId), {
@@ -2377,6 +4018,18 @@ const html = String.raw`<!doctype html>
             state.activeWorkOrderId = created.workOrder.id;
             showToast("Sucesso", "Ordem de serviço criada com sucesso.");
           }
+
+          // Close work order modal on successful submit
+          el('work-order-modal')?.classList.remove('open');
+          
+          // Reset photos
+          photoBeforeBase64 = "";
+          photoAfterBase64 = "";
+          const p1 = el('preview-photo-before');
+          const p2 = el('preview-photo-after');
+          if (p1) p1.style.display = 'none';
+          if (p2) p2.style.display = 'none';
+
           resetWorkOrderForm();
           await load();
         } catch (error) {
@@ -2815,17 +4468,80 @@ const html = String.raw`<!doctype html>
         }
       });
 
-      el("attach-evidence").addEventListener("click", async () => {
+      el("attach-evidence").addEventListener("click", () => {
         requireWorkOrder();
-        const title = window.prompt("Título da evidência");
-        if (!title) return;
-        const notes = window.prompt("Notas da evidência") || "";
-        await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/evidence", {
-          method: "POST",
-          body: JSON.stringify({ organizationId: state.activeOrganizationId, kind: "note", title, notes })
-        });
-        await load();
+        el('evidence-create-form').reset();
+        el('evidence-modal').classList.add('open');
+        el('evidence-modal').setAttribute('aria-hidden', 'false');
       });
+
+      const closeEvidenceModal = () => {
+        const modal = el('evidence-modal');
+        if (modal) {
+          if (document.activeElement && modal.contains(document.activeElement)) {
+            (document.activeElement as HTMLElement).blur();
+          }
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+      };
+
+      const btnCloseEvidence = el("btn-close-evidence-modal");
+      if (btnCloseEvidence) {
+        btnCloseEvidence.addEventListener("click", closeEvidenceModal);
+      }
+
+      const btnCancelEvidence = el("btn-cancel-evidence-modal");
+      if (btnCancelEvidence) {
+        btnCancelEvidence.addEventListener("click", closeEvidenceModal);
+      }
+
+      const evidenceModalOverlay = el("evidence-modal");
+      if (evidenceModalOverlay) {
+        evidenceModalOverlay.addEventListener("click", (e) => {
+          if (e.target === evidenceModalOverlay) {
+            closeEvidenceModal();
+          }
+        });
+      }
+
+      const evidenceCreateForm = el("evidence-create-form");
+      if (evidenceCreateForm) {
+        evidenceCreateForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          requireWorkOrder();
+          
+          const titleInput = el("evidence-title-input") as HTMLInputElement;
+          const notesInput = el("evidence-notes-input") as HTMLTextAreaElement;
+          
+          const title = titleInput ? titleInput.value.trim() : "";
+          const notes = notesInput ? notesInput.value.trim() : "";
+          
+          if (!title) {
+            showToast("Aviso", "Por favor, digite um título para a evidência.", "warning");
+            return;
+          }
+          
+          try {
+            showToast("Salvando", "Adicionando evidência...", "info");
+            await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/evidence", {
+              method: "POST",
+              body: JSON.stringify({ 
+                organizationId: state.activeOrganizationId, 
+                kind: "note", 
+                title, 
+                notes 
+              })
+            });
+            
+            closeEvidenceModal();
+            showToast("Sucesso", "Evidência adicionada com sucesso!", "success");
+            await load();
+          } catch (error) {
+            showToast("Erro", "Erro ao salvar evidência: " + error.message, "error");
+          }
+        });
+      }
 
       async function runDiagnosisAgent() {
         requireWorkOrder();
@@ -2855,73 +4571,1799 @@ const html = String.raw`<!doctype html>
 
       el("submit-budget").addEventListener("click", async () => {
         requireWorkOrder();
+        const wo = activeWorkOrder();
+        if (!wo) return;
+        
+        el('work-order-modal').classList.add('open');
+        el('work-order-modal-title').textContent = "💸 Composição de Orçamento — " + (wo.sequenceNumber || "OS");
+        
+        state.formMaterials = JSON.parse(JSON.stringify(wo.materials || []));
+        renderFormMaterials();
+        
         const form = document.forms["budget-form"];
-        const data = Object.fromEntries(new FormData(form).entries());
-        Object.keys(data).forEach((key) => { if (key !== "riskLevel" && key !== "notes") data[key] = asNumber(data[key]) || 0; });
-        data.organizationId = state.activeOrganizationId;
-        await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/budget", { method: "POST", body: JSON.stringify(data) });
-        await load();
+        form.querySelector('[name="materialsTotal"]').value = (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+        form.querySelector('[name="laborTotal"]').value = wo.laborCost !== undefined ? wo.laborCost : "";
+        form.querySelector('[name="durationHours"]').value = wo.estimatedDurationHours !== undefined ? wo.estimatedDurationHours : "";
+        form.querySelector('[name="notes"]').value = (wo.budget && wo.budget.notes) ? wo.budget.notes : "";
+        form.querySelector('[name="amount"]').value = (wo.budget && wo.budget.amount) ? wo.budget.amount : "";
+        
+        if (typeof calculateMarginRealTime === "function") {
+          calculateMarginRealTime();
+        }
+        
+        setModalMode("budget");
       });
 
-      el("approve-budget").addEventListener("click", async () => {
-        requireWorkOrder();
-        await call("/workflow/approvals", { method: "POST", body: JSON.stringify({ organizationId: state.activeOrganizationId, subjectId: state.activeWorkOrderId, requestedBy: "web-operator", decision: "approved" }) });
-        await load();
-      });
-
-      el("start-work").addEventListener("click", async () => {
-        requireWorkOrder();
-        await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/status", { method: "PATCH", body: JSON.stringify({ organizationId: state.activeOrganizationId, state: "in_progress", reason: "Execução iniciada pelo cockpit." }) });
-        await load();
-      });
-
-      el("close-work").addEventListener("click", async () => {
-        requireWorkOrder();
-        await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/status", { method: "PATCH", body: JSON.stringify({ organizationId: state.activeOrganizationId, state: "closed", reason: "Serviço encerrado pelo cockpit." }) });
-        await load();
-      });
-
-      el("edit-work-order").addEventListener("click", () => {
+      // Unified Stage Transition Trigger
+      async function triggerStageTransition(toStage, extraData = {}) {
         requireWorkOrder();
         const wo = activeWorkOrder();
-        startEditWorkOrder(wo);
-      });
+        if (!wo) return;
+        const actorName = state.user?.name || "Técnico";
+        const actorId = state.user?.email || "system";
+        
+        const payload = {
+          toStage,
+          actorId,
+          actorName,
+          notes: extraData.notes || "Transição para a etapa " + toStage + " efetuada via aplicativo.",
+          ...extraData
+        };
 
-      el("work-order-cancel-btn").addEventListener("click", () => {
-        resetWorkOrderForm();
-      });
+        const res = await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/stage-transition?organizationId=" + encodeURIComponent(state.activeOrganizationId), {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        
+        await load();
+        return res;
+      }
 
-      el("cancel-work-order").addEventListener("click", async () => {
-        requireWorkOrder();
-        const ok = await showConfirm("Cancelar Ordem de Serviço", "Deseja realmente cancelar esta ordem de serviço?");
-        if (!ok) return;
+      el("budget-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
         try {
-          await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/status", {
-            method: "PATCH",
-            body: JSON.stringify({ organizationId: state.activeOrganizationId, state: "cancelled", reason: "Cancelado pelo cockpit." })
+          requireWorkOrder();
+          const form = event.currentTarget;
+          const data = Object.fromEntries(new FormData(form).entries());
+          Object.keys(data).forEach((key) => { if (key !== "risk" && key !== "notes") data[key] = asNumber(data[key]) || 0; });
+          data.organizationId = state.activeOrganizationId;
+          data.materials = state.formMaterials || [];
+          
+          // 1. Persist the budget data using standard POST endpoint
+          await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/budget", { 
+            method: "POST", 
+            body: JSON.stringify(data) 
           });
-          showToast("Sucesso", "Ordem de serviço cancelada com sucesso.");
-          await load();
+          
+          // 2. Perform FSM transition to budget_sent with budget versions support!
+          await triggerStageTransition("budget_sent", {
+            notes: data.notes || "Orçamento oficial enviado para análise e aprovação do cliente."
+          });
+          
+          showToast("Orçamento Enviado", "Orçamento registrado e OS enviada para Negociação.", "success");
+          el('work-order-modal').classList.remove('open');
         } catch (error) {
-          showToast("Erro", "Erro ao cancelar ordem de serviço: " + error.message, "error");
+          showToast("Erro", "Erro ao enviar orçamento: " + error.message, "error");
         }
       });
 
-      el("delete-work-order").addEventListener("click", async () => {
-        requireWorkOrder();
-        const ok = await showConfirm("Excluir Ordem de Serviço", "Deseja realmente excluir esta ordem de serviço? Esta ação é irreversível e removerá todas as evidências, relatórios e IA associados.");
-        if (!ok) return;
+      // BIND FLOW ACTION BUTTONS SECURELY TO THE RIGID FSM ENDPOINT
+      el("start-work")?.addEventListener("click", async () => {
         try {
+          const wo = activeWorkOrder();
+          if (!wo) return;
+          const target = wo.state === "rework" ? "in_progress" : "in_progress";
+          
+          await triggerStageTransition(target, {
+            notes: "Manutenção iniciada em campo pelo técnico."
+          });
+          showToast("OS Iniciada", "Status da OS alterado para Em Execução.", "success");
+        } catch (err) {
+          showToast("Erro", err.message, "error");
+        }
+      });
+
+      el("approve-budget")?.addEventListener("click", () => {
+        el('panel-tool-signature')?.classList.add('open');
+        if (typeof initSignatureCanvas === "function") {
+          initSignatureCanvas();
+        }
+      });
+
+      el("rework-work")?.addEventListener("click", async () => {
+        try {
+          if (confirm("Deseja realmente solicitar o retrabalho desta Ordem de Serviço?")) {
+            await triggerStageTransition("rework", {
+              notes: "Retrabalho solicitado pelo cliente / laudo final recusado."
+            });
+            showToast("Retrabalho Ativado", "A Ordem de Serviço retornou para a etapa de Retrabalho.", "success");
+          }
+        } catch (err) {
+          showToast("Erro", err.message, "error");
+        }
+      });
+
+      // Budget Rejected flow
+      async function openDeclineModal() {
+        requireWorkOrder();
+        el("decline-reason-form").reset();
+        el("decline-reason-modal").classList.add("open");
+      }
+
+      el("btn-close-decline-modal")?.addEventListener("click", () => el("decline-reason-modal").classList.remove("open"));
+      el("btn-cancel-decline")?.addEventListener("click", () => el("decline-reason-modal").classList.remove("open"));
+      
+      el("decline-reason-form")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          const declineReason = el("decline-category-select").value;
+          const notes = el("decline-notes-input").value.trim() || "Orçamento declinado pelo cliente.";
+          
+          await triggerStageTransition("budget_rejected", {
+            declineReason,
+            notes
+          });
+          
+          el("decline-reason-modal").classList.remove("open");
+          showToast("Orçamento Recusado", "Orçamento marcado como recusado no pipeline.", "success");
+        } catch (err) {
+          showToast("Erro", err.message, "error");
+        }
+      });
+
+      // Auto-transition from visited to budget_draft on Initial Report Submit
+      // Tab switching in OS Details Sidebar (Geral vs Laudo Técnico)
+      el("aside-tab-general").addEventListener("click", () => {
+        el("aside-tab-general").classList.add("active");
+        el("aside-tab-laudo").classList.remove("active");
+        el("selected-work-order").style.display = "block";
+        el("selected-work-order-laudo").style.display = "none";
+      });
+
+      el("aside-tab-laudo").addEventListener("click", () => {
+        el("aside-tab-laudo").classList.add("active");
+        el("aside-tab-general").classList.remove("active");
+        el("selected-work-order").style.display = "none";
+        el("selected-work-order-laudo").style.display = "block";
+      });
+
+      // Submit handler for Laudo Técnico form
+      el("laudo-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+          requireWorkOrder();
+          const wo = activeWorkOrder();
+          const laudoInicial = el("laudo-inicial-input").value.trim();
+          const laudoFinal = el("laudo-final-input").value.trim();
+          const validadeGarantiaDias = parseInt(el("laudo-garantia-input").value, 10) || 90;
+
+          // Package Before & After photos into evidence array
+          const evidenceArr = wo.evidence ? JSON.parse(JSON.stringify(wo.evidence)) : [];
+          if (laudoPhotoBeforeBase64) {
+            evidenceArr.push({
+              id: "evd_" + Math.random().toString(36).substring(2, 9),
+              organizationId: state.activeOrganizationId,
+              workOrderId: state.activeWorkOrderId,
+              kind: "photo",
+              title: "Foto Antes - Diagnóstico",
+              url: laudoPhotoBeforeBase64,
+              attachedAt: new Date().toISOString(),
+              type: "before",
+              metadata: { type: "before" }
+            });
+          }
+          if (laudoPhotoAfterBase64) {
+            evidenceArr.push({
+              id: "evd_" + Math.random().toString(36).substring(2, 9),
+              organizationId: state.activeOrganizationId,
+              workOrderId: state.activeWorkOrderId,
+              kind: "photo",
+              title: "Foto Depois - Conclusão",
+              url: laudoPhotoAfterBase64,
+              attachedAt: new Date().toISOString(),
+              type: "after",
+              metadata: { type: "after" }
+            });
+          }
+
+          const payload = {
+            organizationId: state.activeOrganizationId,
+            laudoInicial,
+            laudoFinal,
+            validadeGarantiaDias,
+            evidence: evidenceArr
+          };
+
           await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "?organizationId=" + encodeURIComponent(state.activeOrganizationId), {
-            method: "DELETE"
+            method: "PATCH",
+            body: JSON.stringify(payload)
           });
-          state.activeWorkOrderId = "";
-          showToast("Sucesso", "Ordem de serviço excluída com sucesso.");
+
+          // Perform state transitions according to flow trail and requisites
+          if (laudoInicial && wo.state === "scheduled") {
+            await triggerStageTransition("visited", { notes: "Visita técnica concluída com sucesso e laudo inicial anexado." });
+            await triggerStageTransition("budget_draft", { notes: "Rascunho de orçamento iniciado automaticamente." });
+          } else if (laudoFinal && wo.state === "in_progress") {
+            await triggerStageTransition("pending_acceptance", { notes: "Serviço concluído e laudo final anexado. OS aguardando aceite." });
+          }
+
+          // Reset photos
+          laudoPhotoBeforeBase64 = "";
+          laudoPhotoAfterBase64 = "";
+          const p1 = el('laudo-preview-before');
+          const p2 = el('laudo-preview-after');
+          if (p1) p1.style.display = 'none';
+          if (p2) p2.style.display = 'none';
+
+          showToast("Laudo Técnico salvo", "Informações e evidências visuais salvas com sucesso.", "success");
           await load();
         } catch (error) {
-          showToast("Erro", "Erro ao excluir ordem de serviço: " + error.message, "error");
+          showToast("Erro", "Erro ao salvar laudo técnico: " + error.message, "error");
         }
       });
+
+      // Warranty active modal flow on close-work trigger
+      el("close-work")?.addEventListener("click", () => {
+        try {
+          requireWorkOrder();
+          const wo = activeWorkOrder();
+          if (!wo) return;
+          
+          el("warranty-days-input").value = String(wo.validadeGarantiaDias || 90);
+          el("warranty-terms-input").value = "Garantia padrão cobrindo defeitos de fabricação de peças e mão de obra aplicada.";
+          el("warranty-customization-modal").classList.add("open");
+        } catch (err) {
+          showToast("Erro", err.message, "error");
+        }
+      });
+
+      el("btn-close-warranty-modal")?.addEventListener("click", () => el("warranty-customization-modal").classList.remove("open"));
+      el("btn-cancel-warranty")?.addEventListener("click", () => el("warranty-customization-modal").classList.remove("open"));
+
+      el("warranty-customization-form")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          const days = Number(el("warranty-days-input").value || 90);
+          const terms = el("warranty-terms-input").value.trim();
+
+          const wo = activeWorkOrder();
+          if (wo.state === "accepted") {
+            await triggerStageTransition("invoiced", { notes: "Ordem de serviço faturada e cobrada." });
+          }
+          
+          await triggerStageTransition("warranty_active", {
+            warrantyDays: days,
+            terms,
+            notes: "Garantia iniciada formalmente após aceite do cliente."
+          });
+
+          el("warranty-customization-modal").classList.remove("open");
+          showToast("Garantia Ativada", "OS faturada e garantia ativada com sucesso.", "success");
+        } catch (err) {
+          showToast("Erro", err.message, "error");
+        }
+      });
+
+
+      // =========================================================================
+      // MEU AJUDANTE EXPENSES, CATEGORIES & TOOLS CONTROLLERS
+      // =========================================================================
+      
+      state.materials = [];
+      state.services = [];
+      state.expenses = [];
+      state.expenseCategories = [];
+      state.signaturesCount = Number(localStorage.getItem('atlas_signatures_count') || '0');
+
+      const availableIcons = ['❓', '🛠', '⛽', '🍔', '🚗', '🔧', '📦', '⚙', '💬', '🏠', '💻', '💡', '💰', '🩺', '✈', '📅', '📞', '🚿', '🔌', '🔒', '🔑', '🎨', '📝', '🛒'];
+      const availableColors = ['#4CAF50', '#FF9800', '#E91E63', '#2196F3', '#FFEB3B', '#9C27B0', '#795548', '#9E9E9E', '#00BCD4', '#009688', '#FF5722', '#673AB7', '#3F51B5', '#8BC34A', '#CDDC39', '#FFC107'];
+      
+      let selectedCategoryIcon = availableIcons[0];
+      let selectedCategoryColor = availableColors[0];
+
+      function closeToolPanels() {
+        document.querySelectorAll('#tools ~ .modal-overlay, #tools .modal-overlay').forEach(p => p.classList.remove('open'));
+      }
+
+      function renderToolsMetrics() {
+        el('metric-registered-materials').textContent = state.materials.length;
+        el('metric-registered-services').textContent = state.services.length;
+        el('metric-registered-clients').textContent = state.organizations.length;
+        el('metric-active-signatures').textContent = state.signaturesCount;
+      }
+
+      // --- 1. SIGNATURE CANVAS LOGIC ---
+      let canvas, ctx, drawing = false;
+      function initSignatureCanvas() {
+        canvas = el('signature-canvas');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#edf7ff';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => {
+          const t = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          startDrawing({ clientX: t.clientX, clientY: t.clientY });
+          e.preventDefault();
+        });
+        canvas.addEventListener('touchmove', (e) => {
+          const t = e.touches[0];
+          draw({ clientX: t.clientX, clientY: t.clientY });
+          e.preventDefault();
+        });
+        canvas.addEventListener('touchend', stopDrawing);
+      }
+
+      function startDrawing(e) {
+        drawing = true;
+        ctx.beginPath();
+        const rect = canvas.getBoundingClientRect();
+        ctx.moveTo(
+          (e.clientX - rect.left) * (canvas.width / rect.width),
+          (e.clientY - rect.top) * (canvas.height / rect.height)
+        );
+      }
+
+      function draw(e) {
+        if (!drawing) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.lineTo(
+          (e.clientX - rect.left) * (canvas.width / rect.width),
+          (e.clientY - rect.top) * (canvas.height / rect.height)
+        );
+        ctx.stroke();
+      }
+
+      function stopDrawing() {
+        drawing = false;
+      }
+
+      function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        el('signature-preview-container').style.display = 'none';
+      }
+
+      async function saveSignature() {
+        const dataUrl = canvas.toDataURL();
+        el('signature-preview-img').src = dataUrl;
+        el('signature-preview-container').style.display = 'block';
+        state.signaturesCount++;
+        localStorage.setItem('atlas_signatures_count', state.signaturesCount);
+        renderToolsMetrics();
+        
+        if (state.activeWorkOrderId) {
+          try {
+            const wo = activeWorkOrder();
+            if (wo) {
+              const evidenceArr = wo.evidence ? JSON.parse(JSON.stringify(wo.evidence)) : [];
+              // Remove old signature if present to avoid piling them up
+              const filteredEvidence = evidenceArr.filter(e => e.type !== 'signature' && e.kind !== 'signature');
+              filteredEvidence.push({
+                id: "evd_" + Math.random().toString(36).substring(2, 9),
+                organizationId: state.activeOrganizationId,
+                workOrderId: state.activeWorkOrderId,
+                kind: "photo",
+                title: "Assinatura do Cliente - Aceite",
+                url: dataUrl,
+                attachedAt: new Date().toISOString(),
+                type: "signature",
+                metadata: { type: "signature" }
+              });
+              
+              await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "?organizationId=" + encodeURIComponent(state.activeOrganizationId), {
+                method: "PATCH",
+                body: JSON.stringify({ 
+                  organizationId: state.activeOrganizationId, 
+                  evidence: filteredEvidence 
+                })
+              });
+
+              // Trigger formal FSM stage transition to accepted
+              await triggerStageTransition("accepted", {
+                notes: "Aceite formal assinado digitalmente pelo cliente."
+              });
+              
+              showToast("Aceite Formal Vinculado", "Assinatura anexada e OS aceita com sucesso.", "success");
+              el('panel-tool-signature').classList.remove('open');
+              await load();
+            }
+          } catch (err) {
+            showToast("Erro", "Erro ao salvar assinatura na OS: " + err.message, "error");
+          }
+        } else {
+          showToast("Assinatura Salva", "Assinatura gravada localmente nas ferramentas.", "success");
+        }
+      }
+
+      // --- 2. COST CALCULATORS ---
+      function calculatePrices() {
+        const mat = Number(el('calc-materials-cost').value || 0);
+        const hours = Number(el('calc-labor-hours').value || 0);
+        const rate = Number(el('calc-labor-rate').value || 0);
+        const margin = Number(el('calc-profit-margin').value || 0);
+
+        const labor = hours * rate;
+        const production = mat + labor;
+        const profit = production * (margin / 100);
+        const finalPrice = production + profit;
+
+        el('res-labor-cost').textContent = money(labor);
+        el('res-production-cost').textContent = money(production);
+        el('res-profit-value').textContent = money(profit);
+        el('res-final-price').textContent = money(finalPrice);
+      }
+
+      // --- 3. DYNAMIC REGISTRIES ---
+      function renderMaterials(filterQuery = '') {
+        const container = el('materials-list-container');
+        if (!container) return;
+        const q = normalizeSearch(filterQuery);
+        const items = state.materials.filter(m => normalizeSearch(m.title).includes(q));
+
+        if (items.length === 0) {
+          container.innerHTML = '<div class="slot"><strong>Nenhum material encontrado.</strong></div>';
+          return;
+        }
+
+        container.innerHTML = items.map((m) => {
+          return '<div class="slot" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+            '<div><strong>' + htmlEscape(m.title) + '</strong>' +
+            '<small>Unidade: ' + htmlEscape(m.unit) + ' | Valor: ' + money(m.value) + ' | Margem: ' + (m.marginEnabled ? 'Ativa' : 'Inativa') + '</small></div>' +
+            '<div style="display:flex; gap:6px;">' +
+            '<button class="secondary" style="border-color: var(--danger); color: var(--danger); padding:4px 8px; font-size:11px; cursor:pointer;" onclick="deleteMaterial(\'' + m.id + '\')">Excluir</button>' +
+            '</div></div>';
+        }).join("");
+      }
+
+      async function deleteMaterial(id) {
+        try {
+          await call("/materials/" + id, { method: "DELETE" });
+          state.materials = state.materials.filter(m => m.id !== id);
+          renderMaterials();
+          renderToolsMetrics();
+          showToast("Material Excluído", "Material removido do banco de dados.", "success");
+        } catch (err) {
+          showToast("Erro ao Excluir", err.message, "danger");
+        }
+      }
+
+      function renderServices(filterQuery = '') {
+        const container = el('services-list-container');
+        if (!container) return;
+        const q = normalizeSearch(filterQuery);
+        const items = state.services.filter(s => normalizeSearch(s.title).includes(q));
+
+        if (items.length === 0) {
+          container.innerHTML = '<div class="slot"><strong>Nenhum serviço cadastrado.</strong></div>';
+          return;
+        }
+
+        container.innerHTML = items.map((s) => {
+          return '<div class="slot" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+            '<div><strong>' + htmlEscape(s.title) + '</strong>' +
+            '<small>Cálculo por hora: ' + (s.hourlyEnabled ? 'Sim' : 'Não') + ' | Valor base: ' + money(s.value) + '</small></div>' +
+            '<div style="display:flex; gap:6px;">' +
+            '<button class="secondary" style="border-color: var(--danger); color: var(--danger); padding:4px 8px; font-size:11px; cursor:pointer;" onclick="deleteService(\'' + s.id + '\')">Excluir</button>' +
+            '</div></div>';
+        }).join("");
+      }
+
+      async function deleteService(id) {
+        try {
+          await call("/services/" + id, { method: "DELETE" });
+          state.services = state.services.filter(s => s.id !== id);
+          renderServices();
+          renderToolsMetrics();
+          showToast("Serviço Excluído", "Serviço removido do banco de dados.", "success");
+        } catch (err) {
+          showToast("Erro ao Excluir", err.message, "danger");
+        }
+      }
+
+      function renderClientsList(filterQuery = '') {
+        const container = el('clients-list-container');
+        if (!container) return;
+        const q = normalizeSearch(filterQuery);
+        const items = state.organizations.filter(o => normalizeSearch(o.name).includes(q));
+
+        if (items.length === 0) {
+          container.innerHTML = '<div class="slot"><strong>Nenhum cliente cadastrado.</strong></div>';
+          return;
+        }
+
+        container.innerHTML = items.map((o) => {
+          return '<div class="slot" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">' +
+            '<div><strong>' + htmlEscape(o.name) + '</strong>' +
+            '<small>CPF/CNPJ: ' + htmlEscape(o.document || 'Não informado') + ' | Tel: ' + htmlEscape(o.phone || 'Não informado') + '</small>' +
+            '<small>' + htmlEscape(o.address || 'Sem endereço cadastrado') + '</small></div></div>';
+        }).join("");
+      }
+
+      // Autocomplete list configs
+      const mockMaterialSuggestions = [
+        "ABRAÇADEIRA NYLON 200 MM", "CABO FLEXÍVEL 1.0 MM²", "CABO FLEXÍVEL 1.5 MM²",
+        "CABO FLEXÍVEL 10 MM²", "CABO FLEXÍVEL 120 MM²", "CABO FLEXÍVEL 16 MM²",
+        "CABO FLEXÍVEL 185 MM²", "CABO FLEXÍVEL 2.5 MM²", "CABO DE ALUMÍNIO MULTIPLEX",
+        "DISJUNTOR DIN MONOFÁSICO 16A", "DISJUNTOR DIN TRIFÁSICO 50A", "FITA ISOLANTE 3M"
+      ];
+      const mockServiceSuggestions = [
+        "Instalação de Tomada Elétrica Simples", "Substituição de Disjuntor Monofásico",
+        "Instalação de Interruptor Simples/Paralelo", "Instalação de Chuveiro Elétrico",
+        "Revisão Geral de Quadro de Distribuição (QDC)", "Passagem de Cabeamento (Fios e Cabos)",
+        "Atendimento Técnico Emergencial (Geral)"
+      ];
+
+      function setupAutocomplete(inputElId, listElId, suggestions) {
+        const inp = el(inputElId);
+        const box = el(listElId);
+        if (!inp || !box) return;
+
+        inp.addEventListener('input', (e) => {
+          const val = e.target.value.trim();
+          if (val.length < 2) {
+            box.hidden = true;
+            return;
+          }
+          const matches = suggestions.filter(s => normalizeSearch(s).includes(normalizeSearch(val))).slice(0, 5);
+          if (matches.length === 0) {
+            box.hidden = true;
+            return;
+          }
+          box.hidden = false;
+          box.innerHTML = matches.map(m => '<button type="button" class="customer-suggestion" style="padding: 8px 12px; font-weight:bold;">' + htmlEscape(m) + '</button>').join("");
+          
+          box.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+              inp.value = btn.textContent;
+              box.hidden = true;
+            });
+          });
+        });
+
+        document.addEventListener('click', (e) => {
+          if (e.target !== inp && !box.contains(e.target)) {
+            box.hidden = true;
+          }
+        });
+      }
+
+      // --- 4. EXPENSE LEDGER AND CATEGORIES ---
+      function populateExpenseMonthFilter() {
+        const filter = el('expense-month-filter');
+        if (!filter) return;
+        
+        const months = new Set();
+        months.add(todayIso.slice(0, 7));
+        state.expenses.forEach(e => {
+          if (e.expenseDate) months.add(e.expenseDate.slice(0, 7));
+        });
+
+        const sortedMonths = Array.from(months).sort().reverse();
+        filter.innerHTML = sortedMonths.map(m => {
+          const [yr, mn] = m.split('-');
+          const label = new Date(yr, mn - 1, 15).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+          return '<option value="' + m + '">' + label.charAt(0).toUpperCase() + label.slice(1) + '</option>';
+        }).join("");
+      }
+
+      function populateCategorySelect() {
+        const sel = el('expense-category-select');
+        if (!sel) return;
+        sel.innerHTML = state.expenseCategories.map(c => '<option value="' + c.id + '">' + c.icon + ' ' + htmlEscape(c.name) + '</option>').join("");
+      }
+
+      function renderCategoriesGrid() {
+        const grid = el('categories-list-container');
+        if (!grid) return;
+        
+        grid.innerHTML = state.expenseCategories.map(c => {
+          const amt = state.expenses
+            .filter(e => e.categoryId === c.id)
+            .reduce((sum, e) => sum + e.value, 0);
+          
+          return '<div class="category-card">' +
+            '<div class="category-circle-icon" style="background:' + c.color + ';">' + c.icon + '</div>' +
+            '<span>' + htmlEscape(c.name) + '</span>' +
+            '<small>' + money(amt) + '</small>' +
+            '</div>';
+        }).join("");
+      }
+
+      function renderExpensesLedger(monthFilterValue) {
+        const container = el('expenses-list-container');
+        if (!container) return;
+
+        const filtered = state.expenses.filter(e => e.expenseDate && e.expenseDate.slice(0, 7) === monthFilterValue);
+        
+        let billingTotal = state.workOrders
+          .filter(wo => ['approved', 'in_progress', 'closed'].includes(wo.state))
+          .reduce((sum, wo) => sum + Number(wo.budget?.amount || 0), 0);
+
+        let expenseTotal = filtered.reduce((sum, e) => sum + e.value, 0);
+        let monthTotalAllExpenses = state.expenses
+          .filter(e => e.expenseDate && e.expenseDate.slice(0, 7) === todayIso.slice(0, 7))
+          .reduce((sum, e) => sum + e.value, 0);
+
+        el('expense-month-total').textContent = money(monthTotalAllExpenses);
+        el('expense-count-total').textContent = state.expenses.length;
+        el('cashflow-billing-total').textContent = money(billingTotal);
+        el('cashflow-balance-total').textContent = money(billingTotal - monthTotalAllExpenses);
+
+        el('aside-revenue-total').textContent = 'Faturamento: ' + money(billingTotal);
+        el('aside-expenses-total').textContent = 'Despesas: ' + money(expenseTotal);
+        const net = billingTotal - expenseTotal;
+        el('aside-net-total').textContent = 'Líquido: ' + money(net);
+        el('aside-net-total').style.color = net >= 0 ? 'var(--green)' : 'var(--danger)';
+
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="slot"><strong>Nenhum gasto registrado para este mês.</strong></div>';
+          return;
+        }
+
+        container.innerHTML = filtered.map((e) => {
+          const cat = state.expenseCategories.find(c => c.id === e.categoryId) || { icon: '❓', color: '#607D8B', name: 'Não definida' };
+          const dt = new Date(e.expenseDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          return '<div class="expense-card">' +
+            '<div class="expense-info">' +
+            '<div class="category-circle-icon" style="background:' + cat.color + '; width:36px; height:36px; font-size:14px;">' + cat.icon + '</div>' +
+            '<div class="expense-meta">' +
+            '<strong>' + htmlEscape(e.description) + '</strong>' +
+            '<small>' + htmlEscape(cat.name) + ' • ' + dt + '</small>' +
+            '</div></div>' +
+            '<div style="display:flex; align-items:center; gap:12px;">' +
+            '<span class="expense-amount">' + money(e.value) + '</span>' +
+            '<button class="secondary" style="border-color: var(--danger); color: var(--danger); padding:4px 8px; font-size:11px; cursor:pointer;" onclick="deleteExpense(\'' + e.id + '\')">Excluir</button>' +
+            '</div></div>';
+        }).join("");
+      }
+
+      async function deleteExpense(id) {
+        try {
+          await call("/expenses/" + id, { method: "DELETE" });
+          state.expenses = state.expenses.filter(e => e.id !== id);
+          const filter = el('expense-month-filter');
+          renderExpensesLedger(filter ? filter.value : todayIso.slice(0, 7));
+          renderCategoriesGrid();
+          showToast("Gasto Removido", "Despesa excluída com sucesso do banco de dados.", "success");
+        } catch (err) {
+          showToast("Erro ao Excluir", err.message, "danger");
+        }
+      }
+
+      function initExpenseModalPickers() {
+        const iconsGrid = el('category-icons-grid');
+        const colorsGrid = el('category-colors-grid');
+        if (!iconsGrid || !colorsGrid) return;
+
+        iconsGrid.innerHTML = availableIcons.map(ic => '<button type="button" class="icon-dot' + (ic === selectedCategoryIcon ? ' active' : '') + '">' + ic + '</button>').join("");
+        colorsGrid.innerHTML = availableColors.map(cl => '<button type="button" class="color-dot' + (cl === selectedCategoryColor ? ' active' : '') + '" style="background:' + cl + ';"></button>').join("");
+
+        iconsGrid.querySelectorAll('.icon-dot').forEach(btn => {
+          btn.addEventListener('click', () => {
+            iconsGrid.querySelectorAll('.icon-dot').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedCategoryIcon = btn.textContent;
+          });
+        });
+
+        colorsGrid.querySelectorAll('.color-dot').forEach(btn => {
+          btn.addEventListener('click', () => {
+            colorsGrid.querySelectorAll('.color-dot').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedCategoryColor = btn.style.backgroundColor;
+          });
+        });
+      }
+
+      function setupRealtimeTableFilter() {
+        const searchInput = el('search-price-table');
+        if (!searchInput) return;
+
+        if (searchInput.dataset.listenerAdded) return;
+        searchInput.dataset.listenerAdded = "true";
+
+        searchInput.addEventListener('input', (e) => {
+          const q = normalizeSearch(e.target.value);
+          const rows = document.querySelectorAll('#price-table-rows tr');
+          rows.forEach(row => {
+            const match = normalizeSearch(row.textContent || "").includes(q);
+            row.style.display = match ? '' : 'none';
+          });
+        });
+      }
+
+      function deduceOrganizationCity(org) {
+        if (!org) return "Rio de Janeiro";
+        const addr = (org.address || org.data?.address || "").toLowerCase();
+        if (addr.includes("rio de janeiro") || addr.includes("rj") || addr === "rio") {
+          return "Rio de Janeiro";
+        }
+        if (addr.includes("sao paulo") || addr.includes("são paulo") || addr.includes("sp")) {
+          return "São Paulo";
+        }
+        if (addr.includes("nova campinas") || addr.includes("duque de caxias") || addr.includes("caxias")) {
+          return "Duque de Caxias";
+        }
+        if (org.city) return org.city;
+        if (org.data?.city) return org.data.city;
+        if (org.data?.addressCity) return org.data.addressCity;
+        return "Rio de Janeiro";
+      }
+
+      async function loadPriceTable() {
+        const tbody = el('price-table-rows');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--text-soft);">Carregando tabela de preços...</td></tr>';
+        
+        try {
+          const org = activeOrganization();
+          const orgCity = deduceOrganizationCity(org);
+          
+          const orgId = state.activeOrganizationId || "";
+          const tenantParam = state.user?.tenantCode || "";
+          const emailParam = state.user?.email || "";
+          const query = "/field/regional-prices?organizationId=" + encodeURIComponent(orgId) + 
+                        "&city=" + encodeURIComponent(orgCity) +
+                        "&tenant=" + encodeURIComponent(tenantParam) +
+                        "&email=" + encodeURIComponent(emailParam);
+          const data = await call(query);
+          const items = data.items || [];
+          
+          if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--text-soft);">Nenhum preço regional disponível para ' + htmlEscape(orgCity) + '.</td></tr>';
+            return;
+          }
+          
+          tbody.innerHTML = items.map((item) => {
+            const range = item.minValue && item.maxValue 
+              ? money(item.minValue) + " - " + money(item.maxValue)
+              : money(item.averageValue * 0.8) + " - " + money(item.averageValue * 1.2);
+              
+            const isOverride = item.organizationId ? '<span style="font-size: 10px; padding: 2px 4px; border-radius: 4px; background: rgba(0,255,100,0.15); color: #00ff64; margin-left: 6px;">Org</span>' : '';
+            
+            return '<tr style="border-bottom: 1px solid var(--line);">' +
+              '<td style="padding: 10px; font-weight: bold;">' + htmlEscape(item.name) + isOverride + '</td>' +
+              '<td style="padding: 10px;">' + htmlEscape(item.unit || 'Un') + '</td>' +
+              '<td style="padding: 10px; text-align: right; color: var(--accent);">' + range + '</td>' +
+              '</tr>';
+          }).join('');
+          
+          setupRealtimeTableFilter();
+        } catch (e) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--red);">Erro ao carregar preços: ' + htmlEscape(e.message) + '</td></tr>';
+        }
+      }
+
+      function setupToolsHubHandlers() {
+        el('tool-signature-btn')?.addEventListener('click', () => {
+          el('panel-tool-signature').classList.add('open');
+          initSignatureCanvas();
+        });
+        el('tool-calc-prices-btn')?.addEventListener('click', () => {
+          el('panel-tool-calc-prices').classList.add('open');
+          calculatePrices();
+        });
+        el('tool-calc-travel-btn')?.addEventListener('click', () => {
+          el('panel-tool-calc-travel').classList.add('open');
+        });
+        el('tool-price-table-btn')?.addEventListener('click', async () => {
+          el('panel-tool-price-table').classList.add('open');
+          await loadPriceTable();
+        });
+        el('tool-materials-btn')?.addEventListener('click', () => {
+          el('panel-tool-materials').classList.add('open');
+          renderMaterials();
+        });
+        el('tool-services-btn')?.addEventListener('click', () => {
+          el('panel-tool-services').classList.add('open');
+          renderServices();
+        });
+        el('tool-clients-btn')?.addEventListener('click', () => {
+          el('panel-tool-clients').classList.add('open');
+          renderClientsList();
+        });
+
+        ['calc-materials-cost', 'calc-labor-hours', 'calc-labor-rate', 'calc-profit-margin'].forEach(id => {
+          el(id)?.addEventListener('input', calculatePrices);
+        });
+
+        function calculateFuelCost() {
+          const dist = Number(el('travel-distance').value || 0);
+          const eff = Number(el('travel-efficiency').value || 1);
+          const prc = Number(el('travel-fuel-price').value || 0);
+          const oth = Number(el('travel-other-costs').value || 0);
+
+          const liters = dist / eff;
+          const cost = liters * prc;
+          const total = cost + oth;
+
+          el('res-fuel-liters').textContent = liters.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' L';
+          el('res-fuel-cost').textContent = money(cost);
+          el('res-travel-total').textContent = money(total);
+        }
+
+        ['travel-distance', 'travel-efficiency', 'travel-fuel-price', 'travel-other-costs'].forEach(id => {
+          el(id)?.addEventListener('input', calculateFuelCost);
+        });
+
+        el('btn-clear-signature')?.addEventListener('click', clearSignature);
+        el('btn-save-signature')?.addEventListener('click', saveSignature);
+      }
+
+
+      // =========================================================================
+      // FASE 1: LAUDO TÉCNICO & INTEGRACAO WHATSAPP
+      // =========================================================================
+
+      function generateLaudoTechnicalHTML(wo) {
+        const org = activeOrganization() || { name: "Cliente Geral", document: "", phone: "", address: "" };
+        const storedBefore = (wo.evidence || []).find(e => e.type === 'before');
+        const storedAfter = (wo.evidence || []).find(e => e.type === 'after');
+        const materialsTotal = (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+        const laborTotal = Number(wo.laborCost || 0);
+        const finalTotal = materialsTotal + laborTotal;
+
+        const beforePhotoHtml = storedBefore 
+          ? '<img src="' + storedBefore.url + '" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; border:1px solid #cbdce6;" />'
+          : '<div style="background:#0b0f14; border:1px dashed #cbdce6; border-radius:8px; height:180px; display:grid; place-items:center; color:#9eb7c7;">Nenhuma foto registrada antes.</div>';
+
+        const afterPhotoHtml = storedAfter 
+          ? '<img src="' + storedAfter.url + '" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; border:1px solid #cbdce6;" />'
+          : '<div style="background:#0b0f14; border:1px dashed #cbdce6; border-radius:8px; height:180px; display:grid; place-items:center; color:#9eb7c7;">Nenhuma foto registrada depois.</div>';
+
+        const materialsListHtml = (wo.materials || []).map(item => {
+          return '<tr>' +
+            '<td style="padding:10px; border-bottom:1px solid #cbdce6;">' + htmlEscape(item.name) + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #cbdce6; text-align:right;">' + item.quantity + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #cbdce6; text-align:right;">' + money(item.unitPrice) + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #cbdce6; text-align:right; font-weight:bold;">' + money(item.totalPrice) + '</td>' +
+            '</tr>';
+        }).join("");
+
+        const storedSignature = (wo.evidence || []).find(e => e.type === 'signature' || e.kind === 'signature');
+        const signaturePreviewUrl = storedSignature ? storedSignature.url : (el('signature-preview-img')?.src || '');
+        const signatureHtml = signaturePreviewUrl
+          ? '<img src="' + signaturePreviewUrl + '" style="max-height:80px; border-bottom: 1px solid #10212c; display:block; margin: 0 auto 6px;" /><small style="color:#4a606e;">Assinatura do Cliente</small>'
+          : '<div style="border-bottom:1px dashed #4a606e; height:50px; width:200px; margin:0 auto 6px;"></div><small style="color:#4a606e;">Assinatura Digital Ausente</small>';
+
+        return '<!doctype html>' +
+          '<html>' +
+          '<head>' +
+            '<meta charset="utf-8" />' +
+            '<title>Laudo Técnico - ' + htmlEscape(wo.sequenceNumber || wo.id) + '</title>' +
+            '<style>' +
+              'body { font-family: sans-serif; color:#10212c; margin:0; padding:20px; background:#f5f8fb; line-height:1.5; }' +
+              '.laudo-card { background:#fff; border:1px solid #cbdce6; border-radius:12px; padding:32px; max-width:800px; margin:0 auto; box-shadow:0 10px 30px rgba(0,0,0,0.05); }' +
+              '.header-grid { display:grid; grid-template-columns:1fr auto; gap:20px; border-bottom:2px solid #00f0c0; padding-bottom:18px; margin-bottom:24px; }' +
+              '.header-grid h1 { margin:0; font-size:24px; color:#07131c; letter-spacing: -0.5px; }' +
+              '.section-title { font-size:14px; font-weight:bold; text-transform:uppercase; color:#0ea5e9; border-bottom:1px solid #cbdce6; padding-bottom:6px; margin:24px 0 12px; letter-spacing:0.5px; }' +
+              '.data-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:13px; }' +
+              '.data-item { display:flex; flex-direction:column; gap:2px; }' +
+              '.data-item span { font-weight:bold; color:#4a606e; }' +
+              '.data-item strong { color:#07131c; font-size:14px; }' +
+              '.photo-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; }' +
+              '.photo-box { display:grid; gap:8px; text-align:center; }' +
+              '.photo-box span { font-weight:bold; font-size:12px; color:#4a606e; text-transform:uppercase; }' +
+              'table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }' +
+              'th { background:#f8fafc; padding:10px; font-weight:bold; border-bottom:1px solid #cbdce6; text-align:left; }' +
+              '.footer-grid { display:grid; grid-template-columns:1fr auto; gap:30px; margin-top:40px; padding-top:20px; border-top:1px solid #cbdce6; align-items:center; }' +
+              '@media print { body { background:#fff; padding:0; } .laudo-card { border:none; box-shadow:none; padding:0; } }' +
+            '</style>' +
+          '</head>' +
+          '<body>' +
+            '<div class="laudo-card">' +
+              '<header class="header-grid">' +
+                '<div>' +
+                  '<h1>ATLAS OS — LAUDO TÉCNICO</h1>' +
+                  '<small style="color:#4a606e; font-weight:bold;">COMPROVAÇÃO OPERACIONAL E AUDITORIA DIGITAL</small>' +
+                '</div>' +
+                '<div style="text-align:right;">' +
+                  '<strong style="color:#0ea5e9; font-size:16px;">' + htmlEscape(wo.sequenceNumber || "OS-" + wo.id.substring(0,6).toUpperCase()) + '</strong><br>' +
+                  '<small style="color:#4a606e;">Emitido em: ' + new Date().toLocaleDateString("pt-BR") + '</small>' +
+                '</div>' +
+              '</header>' +
+
+              '<div class="section-title">Dados do Cliente</div>' +
+              '<div class="data-grid">' +
+                '<div class="data-item"><span>Nome do Cliente / Razão Social</span><strong>' + htmlEscape(org.name) + '</strong></div>' +
+                '<div class="data-item"><span>Documento (CPF/CNPJ)</span><strong>' + htmlEscape(org.document || "Não informado") + '</strong></div>' +
+                '<div class="data-item"><span>Endereço de Atendimento</span><strong>' + htmlEscape(org.address || "Não informado") + '</strong></div>' +
+                '<div class="data-item"><span>Telefone</span><strong>' + htmlEscape(org.phone || "Não informado") + '</strong></div>' +
+              '</div>' +
+
+              '<div class="section-title">Detalhes do Serviço</div>' +
+              '<div class="data-grid">' +
+                '<div class="data-item"><span>Título da OS</span><strong>' + htmlEscape(wo.title) + '</strong></div>' +
+                '<div class="data-item"><span>Técnico Responsável</span><strong>' + htmlEscape(wo.technicianName || "Marcelo Atlas") + '</strong></div>' +
+                '<div class="data-item" style="grid-column: span 2;"><span>Descrição Técnica Executada</span><strong style="font-weight:normal;">' + htmlEscape(wo.description || "Nenhuma descrição técnica detalhada informada.") + '</strong></div>' +
+              '</div>' +
+
+              '<div class="section-title">Comprovação Visual (Antes e Depois)</div>' +
+              '<div class="photo-grid">' +
+                '<div class="photo-box"><span>Visão Geral: Antes</span>' + beforePhotoHtml + '</div>' +
+                '<div class="photo-box"><span>Conclusão: Depois</span>' + afterPhotoHtml + '</div>' +
+              '</div>' +
+
+              '<div class="section-title">Materiais Consumidos & Insumos</div>' +
+              '<table>' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th style="border-radius:6px 0 0 6px;">Descrição do Material</th>' +
+                    '<th style="text-align:right; width:60px;">Qtd</th>' +
+                    '<th style="text-align:right; width:100px;">P. Unitário</th>' +
+                    '<th style="text-align:right; width:120px; border-radius:0 6px 6px 0;">Subtotal</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' +
+                  (materialsListHtml || '<tr><td colspan="4" style="padding:10px; text-align:center; color:#4a606e;">Nenhum material consumido registrado nesta ordem.</td></tr>') +
+                '</tbody>' +
+                '<tfoot>' +
+                  '<tr style="font-weight:bold; border-top:1px solid #cbdce6;">' +
+                    '<td colspan="3" style="padding:10px; text-align:right; color:#4a606e;">Total Geral da Ordem:</td>' +
+                    '<td style="padding:10px; text-align:right; font-size:16px; color:#07131c;">' + money(finalTotal) + '</td>' +
+                  '</tr>' +
+                '</tfoot>' +
+              '</table>' +
+
+              '<div class="footer-grid">' +
+                '<div style="text-align:center;">' +
+                  signatureHtml +
+                '</div>' +
+                '<div style="text-align:right; font-size:11px; color:#4a606e; max-width:300px;">' +
+                  '<strong style="color:#07131c; display:block; margin-bottom:4px;">🛡️ Validação de Conformidade</strong>' +
+                  'Este laudo técnico possui assinatura digital vinculada e registro de auditoria por geolocalização exata GPS.<br>' +
+                  '<span style="font-family:monospace; display:block; margin-top:4px;">ID: ' + wo.id + '</span>' +
+                '</div>' +
+              '</header>' +
+            '</div>' +
+          '</body>' +
+          '</html>';
+      }
+
+      function viewLaudoTechnical() {
+        const wo = activeWorkOrder();
+        if (!wo) return;
+        const htmlContent = generateLaudoTechnicalHTML(wo);
+        const win = window.open("", "_blank");
+        if (win) {
+          win.document.open();
+          win.document.write(htmlContent);
+          win.document.close();
+        }
+      }
+
+      function shareLaudoWhatsApp() {
+        const wo = activeWorkOrder();
+        if (!wo) return;
+        
+        const org = activeOrganization() || { name: "Cliente" };
+        const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS-" + wo.id.substring(0, 6).toUpperCase();
+        const totalAmount = (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0) + Number(wo.laborCost || 0);
+
+        const text = "*ATLAS OS — LAUDO TÉCNICO DIGITAL*\n\n" +
+          "Olá, *" + org.name + "*. Segue o laudo técnico de comprovação de serviços elétricos prestados:\n\n" +
+          "📄 *Ordem de Serviço:* " + displayName + "\n" +
+          "🛠️ *Atendimento:* " + wo.title + "\n" +
+          "💰 *Valor Total:* " + money(totalAmount) + "\n" +
+          "✍️ *Assinatura Digital:* VINCULADA\n\n" +
+          "Acesse a via digital completa e auditoria técnica pelo link:\n" +
+          "http://localhost:5174/?os=" + wo.id;
+
+        const encodedText = encodeURIComponent(text);
+        const mobileUrl = "whatsapp://send?phone=" + encodeURIComponent(org.phone || "") + "&text=" + encodedText;
+        const webUrl = "https://web.whatsapp.com/send?text=" + encodedText;
+
+        // Try opening native WhatsApp, fallback to web
+        const win = window.open(mobileUrl, "_blank");
+        setTimeout(() => {
+          if (!win || win.closed || typeof win.closed === 'undefined') {
+            window.open(webUrl, "_blank");
+          }
+        }, 800);
+      }
+
+      function generateReceiptTechnicalHTML(wo, branding) {
+        const org = activeOrganization() || { name: "Cliente não especificado" };
+        const materialsTotal = (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+        const laborTotal = Number(wo.laborCost || 0);
+        const finalTotal = materialsTotal + laborTotal;
+
+        const materialsListHtml = (wo.materials || []).map((item) =>
+          '<tr>' +
+            '<td style="padding:10px; border-bottom:1px solid #e2e8f0;">' + htmlEscape(item.name) + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:right;">' + item.quantity + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:right;">' + money(item.price) + '</td>' +
+            '<td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:right; font-weight:bold;">' + money(item.totalPrice) + '</td>' +
+          '</tr>'
+        ).join("");
+
+        // Calculate dynamic warranty terms
+        const warrantyDays = Number(wo.validadeGarantiaDias || (branding && branding.warrantyDays) || 90);
+        const dateStart = wo.closedAt ? new Date(wo.closedAt) : new Date();
+        const dateEnd = new Date(dateStart.getTime() + warrantyDays * 24 * 60 * 60 * 1000);
+
+        const emissorName = (branding && branding.emissorName) ? branding.emissorName : "ATLAS OS FIELD SERVICES";
+        const brandType = (branding && branding.brandType) ? branding.brandType : "AUTONOMO";
+        const logoUrl = (branding && branding.logoUrl) ? branding.logoUrl : "";
+        const phone = (branding && branding.phone) ? branding.phone : "";
+        const email = (branding && branding.email) ? branding.email : "";
+        const address = (branding && branding.address) ? branding.address : "";
+        const warrantyTerms = (branding && branding.warrantyTerms) ? branding.warrantyTerms : "Garantia de mão de obra de 90 dias a partir da entrega.";
+        const pixKey = (branding && branding.pixKey) ? branding.pixKey : "";
+
+        const brandTypeLabel = {
+          "AUTONOMO": "Profissional Autônomo",
+          "MEI": "Microempreendedor Individual (MEI)",
+          "FREELANCE": "Freelancer",
+          "EMPRESA": "Razão Social / Marca"
+        }[brandType] || "Prestador de Serviços";
+
+        const logoHtml = logoUrl 
+          ? '<img src="' + htmlEscape(logoUrl) + '" style="max-height:60px; max-width:180px; object-fit:contain; margin-bottom:8px;" />'
+          : '<div style="font-weight:bold; font-size:20px; color:#0d6b7a; letter-spacing:-0.5px;">' + htmlEscape(emissorName) + '</div>';
+
+        const pixSectionHtml = pixKey 
+          ? '<div style="margin-top:20px; padding:16px; background:#f0f9ff; border:1px solid #e0f2fe; border-radius:8px; display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center;">' +
+              '<div style="font-size:24px;">📱</div>' +
+              '<div>' +
+                '<strong style="color:#0d6b7a; display:block; font-size:14px; margin-bottom:2px;">Pagamento Simplificado via PIX</strong>' +
+                '<span style="font-size:12px; color:#4b5563;">Chave Pix Copie e Cole:</span><br>' +
+                '<code style="font-family:monospace; font-size:13px; font-weight:bold; color:#1f2937; background:#fff; padding:2px 6px; border:1px solid #e5e7eb; border-radius:4px; display:inline-block; margin-top:4px;">' + htmlEscape(pixKey) + '</code>' +
+              '</div>' +
+            '</div>'
+          : '';
+
+        // Extract photos and signatures from evidence
+        const storedBefore = (wo.evidence || []).find(e => e.type === 'before' || e.type === 'evidence-photo-before');
+        const storedAfter = (wo.evidence || []).find(e => e.type === 'after' || e.type === 'evidence-photo-after');
+        const storedSignature = (wo.evidence || []).find(e => e.type === 'signature');
+
+        let evidencesHtml = '';
+        if (storedBefore || storedAfter) {
+          evidencesHtml = '<div class="section-title">Evidências do Atendimento (Antes / Depois)</div>' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">' +
+              (storedBefore ? '<div style="text-align:center; padding:10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px;">' +
+                '<strong style="display:block; font-size:12px; color:#4b5563; margin-bottom:6px;">📸 Registro ANTES</strong>' +
+                '<img src="' + storedBefore.url + '" style="max-width:100%; max-height:180px; object-fit:contain; border-radius:6px; border:1px solid #d1d5db;" />' +
+              '</div>' : '<div style="text-align:center; padding:10px; background:#f9fafb; border:1px dashed #e5e7eb; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:12px;">Sem registro prévio</div>') +
+              (storedAfter ? '<div style="text-align:center; padding:10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px;">' +
+                '<strong style="display:block; font-size:12px; color:#4b5563; margin-bottom:6px;">📸 Registro DEPOIS</strong>' +
+                '<img src="' + storedAfter.url + '" style="max-width:100%; max-height:180px; object-fit:contain; border-radius:6px; border:1px solid #d1d5db;" />' +
+              '</div>' : '<div style="text-align:center; padding:10px; background:#f9fafb; border:1px dashed #e5e7eb; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:12px;">Sem registro conclusivo</div>') +
+            '</div>';
+        }
+
+        const signatureHtml = storedSignature 
+          ? '<img src="' + storedSignature.url + '" style="max-height:60px; max-width:200px; object-fit:contain; margin-bottom:2px;" />'
+          : '<div style="border-bottom:1px dashed #9ca3af; height:45px; width:200px; margin:0 auto 6px;"></div>';
+
+        return '<!doctype html>' +
+          '<html>' +
+          '<head>' +
+            '<meta charset="utf-8" />' +
+            '<title>Recibo e Garantia - ' + htmlEscape(wo.sequenceNumber || wo.id) + '</title>' +
+            '<style>' +
+              'body { font-family: system-ui, -apple-system, sans-serif; color:#1f2937; margin:0; padding:20px; background:#f9fafb; line-height:1.5; }' +
+              '.receipt-card { background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:36px; max-width:800px; margin:0 auto; box-shadow:0 10px 25px rgba(0,0,0,0.03); position:relative; }' +
+              '.header-grid { display:grid; grid-template-columns:1fr auto; gap:20px; border-bottom:2px solid #0d6b7a; padding-bottom:20px; margin-bottom:24px; }' +
+              '.header-grid h1 { margin:0; font-size:26px; color:#111827; letter-spacing: -0.5px; }' +
+              '.section-title { font-size:14px; font-weight:bold; text-transform:uppercase; color:#0d6b7a; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:24px 0 12px; letter-spacing:0.5px; }' +
+              '.data-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:13px; }' +
+              '.data-item { display:flex; flex-direction:column; gap:2px; }' +
+              '.data-item span { font-weight:bold; color:#6b7280; }' +
+              '.data-item strong { color:#111827; font-size:14px; }' +
+              'table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }' +
+              'th { background:#f9fafb; padding:10px; font-weight:bold; border-bottom:1px solid #e5e7eb; text-align:left; color:#4b5563; }' +
+              '.footer-grid { display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:40px; padding-top:20px; border-top:1px solid #e5e7eb; align-items:center; }' +
+              '.no-print-bar { background:linear-gradient(135deg, #0d6b7a, #1e3a8a); color:#fff; display:flex; justify-content:space-between; align-items:center; padding:10px 20px; max-width:800px; margin:0 auto 16px; border-radius:8px; font-size:14px; font-weight:bold; box-shadow:0 4px 12px rgba(13,107,122,0.2); }' +
+              '.no-print-bar button { background:#fff; color:#0d6b7a; border:none; padding:6px 14px; font-weight:bold; border-radius:6px; cursor:pointer; font-size:12px; transition:opacity 0.2s; }' +
+              '.no-print-bar button:hover { opacity:0.9; }' +
+              '@media print { body { background:#fff; padding:0; } .receipt-card { border:none; box-shadow:none; padding:0; } .no-print, .no-print-bar { display:none !important; } }' +
+            '</style>' +
+          '</head>' +
+          '<body>' +
+            '<div class="no-print-bar">' +
+              '<span>🧾 Recibo e Certificado de Garantia</span>' +
+              '<div style="display:flex; gap:10px;">' +
+                '<button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+                '<button id="share-btn">🔗 Compartilhar Recibo</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="receipt-card">' +
+              '<header class="header-grid">' +
+                '<div>' +
+                  logoHtml +
+                  '<small style="color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:11px;">' + htmlEscape(brandTypeLabel) + '</small>' +
+                  '<div style="font-size:12px; color:#4b5563; margin-top:6px;">' +
+                    (phone ? '📞 ' + htmlEscape(phone) + ' &nbsp;' : '') +
+                    (email ? '✉️ ' + htmlEscape(email) + '<br>' : '') +
+                    (address ? '📍 ' + htmlEscape(address) : '') +
+                  '</div>' +
+                '</div>' +
+                '<div style="text-align:right;">' +
+                  '<strong style="color:#0d6b7a; font-size:18px;">RECIBO #' + htmlEscape(wo.sequenceNumber || wo.id.substring(0,8).toUpperCase()) + '</strong><br>' +
+                  '<small style="color:#6b7280; font-weight:bold;">Valor: ' + money(finalTotal) + '</small><br>' +
+                  '<small style="color:#6b7280;">Emissão: ' + dateStart.toLocaleDateString("pt-BR") + '</small>' +
+                '</div>' +
+              '</header>' +
+
+              '<div class="section-title">Dados do Tomador / Cliente</div>' +
+              '<div class="data-grid">' +
+                '<div class="data-item"><span>Cliente / Razão Social</span><strong>' + htmlEscape(org.name) + '</strong></div>' +
+                '<div class="data-item"><span>Documento (CPF/CNPJ)</span><strong>' + htmlEscape(org.document || "Não informado") + '</strong></div>' +
+                '<div class="data-item" style="grid-column: span 2;"><span>Endereço de Atendimento</span><strong>' + htmlEscape(org.address || "Não informado") + '</strong></div>' +
+              '</div>' +
+
+              '<div class="section-title">Descrição dos Serviços e Peças</div>' +
+              '<div style="font-size:13px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:16px;">' +
+                '<strong style="color:#111827; display:block; margin-bottom:4px;">' + htmlEscape(wo.title) + '</strong>' +
+                '<span style="color:#4b5563;">' + htmlEscape(wo.description || "Atendimento e serviços prestados sem descrição detalhada.") + '</span>' +
+              '</div>' +
+
+              '<table>' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th style="border-radius:6px 0 0 6px;">Descrição do Insumo / Peça</th>' +
+                    '<th style="text-align:right; width:60px;">Qtd</th>' +
+                    '<th style="text-align:right; width:100px;">Unitário</th>' +
+                    '<th style="text-align:right; width:120px; border-radius:0 6px 6px 0;">Subtotal</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' +
+                  (materialsListHtml || '<tr><td colspan="4" style="padding:12px; text-align:center; color:#6b7280; font-style:italic;">Sem insumos materiais registrados. Apenas custos de mão de obra.</td></tr>') +
+                '</tbody>' +
+                '<tfoot>' +
+                  '<tr style="font-weight:bold; border-top:1px solid #e5e7eb;">' +
+                    '<td colspan="3" style="padding:12px; text-align:right; color:#6b7280;">Mão de obra / Serviços:</td>' +
+                    '<td style="padding:12px; text-align:right;">' + money(laborTotal) + '</td>' +
+                  '</tr>' +
+                  '<tr style="font-weight:bold; background:#f9fafb; border-top:2px solid #0d6b7a;">' +
+                    '<td colspan="3" style="padding:12px; text-align:right; color:#0d6b7a; font-size:14px;">Valor Total Pago:</td>' +
+                    '<td style="padding:12px; text-align:right; font-size:18px; color:#0d6b7a;">' + money(finalTotal) + '</td>' +
+                  '</tr>' +
+                '</tfoot>' +
+              '</table>' +
+
+              pixSectionHtml +
+
+              evidencesHtml +
+
+              '<div class="section-title">🛡️ Certificado de Garantia dos Serviços</div>' +
+              '<div style="font-size:13px; display:grid; gap:8px;">' +
+                '<div style="display:flex; justify-content:space-between; padding:8px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; font-weight:bold; color:#15803d;">' +
+                  '<span>Vigência da Garantia:</span>' +
+                  '<span>De ' + dateStart.toLocaleDateString("pt-BR") + ' até ' + dateEnd.toLocaleDateString("pt-BR") + ' (' + warrantyDays + ' dias)</span>' +
+                '</div>' +
+                '<p style="margin:4px 0 0; color:#4b5563;">' + htmlEscape(warrantyTerms) + '</p>' +
+              '</div>' +
+
+              '<div class="footer-grid">' +
+                '<div style="text-align:center;">' +
+                  '<div style="border-bottom:1px dashed #9ca3af; height:45px; width:200px; margin:0 auto 6px;"></div>' +
+                  '<small style="color:#6b7280; font-weight:bold;">Assinatura do Emissor</small>' +
+                '</div>' +
+                '<div style="text-align:center;">' +
+                  signatureHtml + '<br>' +
+                  '<small style="color:#6b7280; font-weight:bold;">Aceite Formal do Cliente</small>' +
+                '</div>' +
+              '</div>' +
+              '<div style="text-align:right; font-size:11px; color:#6b7280; margin-top:20px; border-top:1px solid #f3f4f6; padding-top:10px;">' +
+                '<strong style="color:#111827; display:block; margin-bottom:2px;">Autenticidade e Transparência</strong>' +
+                'Este recibo foi formalizado digitalmente de forma irrefutável por ATLAS OS e registrado no histórico do cliente.<br>' +
+                '<span style="font-family:monospace; display:block; margin-top:4px;">Chave OS: ' + wo.id + '</span>' +
+              '</div>' +
+            '</div>' +
+            
+            '<script>' +
+              'const shareData = {' +
+                'title: "Recibo e Garantia ' + htmlEscape(wo.sequenceNumber || "OS") + '",' +
+                'text: "Prezado(a) ' + htmlEscape(org.name) + ', segue a via digital do seu recibo e garantia de serviços prestados no valor total de ' + money(finalTotal) + '.",' +
+                'url: window.location.href' +
+              '};' +
+              'document.getElementById("share-btn").addEventListener("click", async () => {' +
+                'if (navigator.share) {' +
+                  'try { await navigator.share(shareData); } catch(err) { console.log(err); }' +
+                '} else {' +
+                  'alert("Copiado link do recibo!");' +
+                  'navigator.clipboard.writeText(window.location.href);' +
+                '}' +
+              '});' +
+            '<\/script>' +
+          '</body>' +
+          '</html>';
+      }
+
+      async function viewReceiptTechnical() {
+        const wo = activeWorkOrder();
+        if (!wo) return;
+        
+        try {
+          const tenantParam = new URLSearchParams(location.search).get("tenant") || localStorage.getItem("atlas_field_tenant") || "";
+          const queryParams = [];
+          if (tenantParam) queryParams.push("tenant=" + encodeURIComponent(tenantParam));
+          const queryString = queryParams.length ? "?" + queryParams.join("&") : "";
+          
+          const branding = await call("/field/tenant-branding" + queryString);
+          const htmlContent = generateReceiptTechnicalHTML(wo, branding);
+          const win = window.open("", "_blank");
+          if (win) {
+            win.document.open();
+            win.document.write(htmlContent);
+            win.document.close();
+          }
+        } catch (e) {
+          showToast("Erro", "Erro ao carregar dados de branding do emissor: " + e.message, "error");
+        }
+      }
+
+      // ESTOQUE DE COMBATE (FASE 3)
+      async function renderInventory(filter = "") {
+        if (!state.activeOrganizationId) {
+          el("inventory-grid").innerHTML = '<div class="slot"><strong>Selecione um cliente ativo para carregar o estoque de combate.</strong></div>';
+          return;
+        }
+
+        try {
+          const res = await call("/inventory?organizationId=" + encodeURIComponent(state.activeOrganizationId));
+          const items = res.items || [];
+          const normalizedFilter = filter.trim().toLowerCase();
+          const filtered = items.filter(item => item.materialName.toLowerCase().includes(normalizedFilter));
+
+          el("inventory-grid").innerHTML = filtered.map(item => {
+            const isLow = item.quantity <= item.minSafetyStock;
+            const statusLabel = item.quantity === 0 ? "Esgotado" : isLow ? "Abaixo do Mínimo" : "Estoque Saudável";
+            const badgeClass = item.quantity === 0 ? "badge danger" : isLow ? "badge progress" : "badge done";
+            
+            return '<div class="op-card" style="display:flex; flex-direction:column; padding:12px; gap:8px; border: 1px solid var(--line);">' +
+              '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
+                '<span class="' + badgeClass + '" style="font-size:10px; margin:0;">' + statusLabel + '</span>' +
+                '<span style="font-size:11px; font-weight:bold; color:var(--text-soft);">' + item.unit + '</span>' +
+              '</div>' +
+              '<strong style="font-size:13px; min-height:36px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; color:var(--text);">' + htmlEscape(item.materialName) + '</strong>' +
+              '<div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:4px;">' +
+                '<span>Qtd: <strong style="font-size:14px; color:var(--text);">' + item.quantity + '</strong></span>' +
+                '<span style="opacity:0.7;">Custo: ' + money(item.unitCost) + '</span>' +
+              '</div>' +
+              '<div style="font-size:10px; opacity:0.65; display:flex; justify-content:space-between;">' +
+                '<span>Mín. Segurança: ' + item.minSafetyStock + '</span>' +
+              '</div>' +
+              '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                '<button type="button" class="secondary btn-adjust-qty" data-id="' + item.id + '" data-change="1" style="flex:1; padding:4px; font-size:11px; min-height:auto;">➕ Repor</button>' +
+                '<button type="button" class="secondary btn-adjust-qty" data-id="' + item.id + '" data-change="-1" style="flex:1; padding:4px; font-size:11px; min-height:auto;">➖ Retirar</button>' +
+              '</div>' +
+            '</div>';
+          }).join("") || '<div class="slot"><strong>Nenhum insumo encontrado no porta-malas.</strong></div>';
+
+          // Attach quick adjustment handlers
+          document.querySelectorAll(".btn-adjust-qty").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const id = btn.getAttribute("data-id");
+              const change = Number(btn.getAttribute("data-change"));
+              const item = items.find(i => i.id === id);
+              if (!item) return;
+
+              const nextQty = Math.max(0, item.quantity + change);
+              await call("/inventory/" + encodeURIComponent(id), {
+                method: "PATCH",
+                body: JSON.stringify({ quantity: nextQty })
+              });
+              
+              showToast("Estoque Atualizado", item.materialName + " agora possui " + nextQty + " " + item.unit + "(s).", "success");
+              await renderInventory(filter);
+              await renderShoppingList();
+            });
+          });
+        } catch (e) {
+          console.error("Failed to load inventory:", e);
+        }
+      }
+
+      async function renderShoppingList() {
+        if (!state.activeOrganizationId) return;
+
+        try {
+          const res = await call("/inventory/shopping-list?organizationId=" + encodeURIComponent(state.activeOrganizationId));
+          const items = res.items || [];
+
+          el("shopping-list-container").innerHTML = items.map(item => {
+            return '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--line); padding-bottom:4px;">' +
+              '<span>❌ ' + htmlEscape(item.materialName) + '</span>' +
+              '<span style="font-weight:bold; color:var(--danger);">' + item.quantity + ' / ' + item.minSafetyStock + ' ' + item.unit + '</span>' +
+            '</div>';
+          }).join("") || '<div style="text-align:center; padding:10px; color:var(--accent);">✅ Todos os insumos estão acima do estoque mínimo!</div>';
+          
+          el("btn-share-shopping-whatsapp").disabled = items.length === 0;
+        } catch (e) {
+          console.error("Failed to load shopping list:", e);
+        }
+      }
+
+      async function shareShoppingListWhatsApp() {
+        if (!state.activeOrganizationId) return;
+        try {
+          const res = await call("/inventory/shopping-list?organizationId=" + encodeURIComponent(state.activeOrganizationId));
+          const items = res.items || [];
+          if (items.length === 0) return;
+
+          let text = "🛒 *LISTA DE COMPRAS OPERACIONAL - ATLAS OS*\n\n" +
+            "Olá! Preciso cotar as seguintes peças para reposição do meu estoque de combate:\n\n";
+          
+          items.forEach(item => {
+            const needQty = Math.max(1, item.minSafetyStock * 2 - item.quantity);
+            text += "• *" + item.materialName + "* - Quantidade: " + needQty + " " + item.unit + "\n";
+          });
+
+          text += "\nPor favor, envie o orçamento assim que possível. Obrigado!";
+          const encoded = encodeURIComponent(text);
+          window.open("https://web.whatsapp.com/send?text=" + encoded, "_blank");
+        } catch (e) {
+          console.error("Failed to share shopping list:", e);
+        }
+      }
+
+      // COPILOTO FINANCEIRO (FASE 2) SIMULATION & SUGGESTIONS
+      async function calculateMarginRealTime() {
+        const form = document.forms["budget-form"];
+        if (!form) return;
+        
+        const distance = Number(el("budget-distance")?.value || 0);
+        const duration = Number(el("budget-duration")?.value || 0);
+        const amount = Number(form.amount?.value || 0);
+        const materialsTotal = Number(form.materialsTotal?.value || 0);
+        const laborTotal = Number(form.laborTotal?.value || 0);
+
+        // Predefined stats (Gasoline: R$5.90/L, consumption: 10km/L, transit: R$40/h)
+        const fuelCost = (distance / 10) * 5.90;
+        const transitCost = (duration / 60) * 40;
+        const invisibleCosts = fuelCost + transitCost;
+
+        if (el("val-fuel-cost")) el("val-fuel-cost").textContent = money(fuelCost);
+        if (el("val-transit-cost")) el("val-transit-cost").textContent = money(transitCost);
+
+        const operationalCost = materialsTotal + laborTotal + invisibleCosts;
+        const netProfit = amount - operationalCost;
+        const margin = amount > 0 ? Math.round((netProfit / amount) * 100) : 0;
+
+        const marginBadge = el("real-margin-badge");
+        const marginBar = el("real-margin-bar");
+        const profitVal = el("real-profit-val");
+        const hourlyRateVal = el("net-hourly-rate");
+
+        if (profitVal) profitVal.textContent = money(netProfit);
+        
+        const durationHours = Number(form.durationHours?.value || 1);
+        if (hourlyRateVal) {
+          const netHourly = durationHours > 0 ? netProfit / durationHours : netProfit;
+          hourlyRateVal.textContent = money(netHourly) + "/h";
+        }
+
+        if (marginBadge && marginBar) {
+          marginBar.style.width = Math.min(Math.max(margin, 0), 100) + "%";
+          if (margin < 15) {
+            marginBadge.textContent = margin + "% - Crítica";
+            marginBadge.style.background = "rgba(255, 76, 76, 0.15)";
+            marginBadge.style.color = "#ff4c4c";
+            marginBar.style.backgroundColor = "#ff4c4c";
+          } else if (margin < 35) {
+            marginBadge.textContent = margin + "% - Saudável";
+            marginBadge.style.background = "rgba(255, 193, 7, 0.15)";
+            marginBadge.style.color = "#ffc107";
+            marginBar.style.backgroundColor = "#ffc107";
+          } else {
+            marginBadge.textContent = margin + "% - Excelente";
+            marginBadge.style.background = "rgba(0, 240, 192, 0.15)";
+            marginBadge.style.color = "var(--accent)";
+            marginBar.style.backgroundColor = "var(--accent)";
+          }
+        }
+
+        // Post simulation info asynchronously to server to persist stats on the work order object
+        if (state.activeWorkOrderId) {
+          try {
+            await call("/maintenance/work-orders/" + encodeURIComponent(state.activeWorkOrderId) + "/margin-simulation", {
+              method: "POST",
+              body: JSON.stringify({
+                organizationId: state.activeOrganizationId,
+                travelDistanceKm: distance,
+                travelDurationMins: duration,
+                vehicleConsumptionKml: 10,
+                fuelPriceLiter: 5.90,
+                unproductiveHourRate: 40,
+                amount
+              })
+            });
+          } catch(e) {
+            console.warn("Margin simulation post failed:", e);
+          }
+        }
+      }
+
+      async function suggestRegionalPrice() {
+        const wo = activeWorkOrder();
+        if (!wo) {
+          showToast("Aviso", "Selecione uma ordem de serviço antes.", "warning");
+          return;
+        }
+        
+        try {
+          const org = activeOrganization();
+          const orgCity = deduceOrganizationCity(org);
+          const query = "/ai/pricing/regional-suggestions?serviceTitle=" + encodeURIComponent(wo.title) + 
+                        "&city=" + encodeURIComponent(orgCity) + 
+                        "&organizationId=" + encodeURIComponent(state.activeOrganizationId || "");
+          const res = await call(query);
+          const form = document.forms["budget-form"];
+          if (form && res) {
+            form.amount.value = String(res.average);
+            showToast("IA: Preço Regional (" + res.dataSource + ")", "Sugerido: " + money(res.average) + " (" + res.category + ")", "success");
+            calculateMarginRealTime();
+          }
+        } catch(e) {
+          showToast("Erro", "Erro ao buscar sugestão regional: " + e.message, "error");
+        }
+      }
+
+      // INTELIGÊNCIA AVANÇADA (FASE 4) - ANÁLISE PREDITIVA & TRANSCRIÇÃO DE VOZ
+      async function runPredictiveVision() {
+        if (!photoBeforeBase64) {
+          showToast("Aviso", "Selecione uma foto de diagnóstico (antes) primeiro.", "warning");
+          return;
+        }
+
+        const desc = el('txt-description')?.value || "";
+        showToast("IA: Visão Computacional", "Analisando foto e buscando pontos de risco elétrico...", "info");
+
+        try {
+          const res = await call("/ai/vision/predictive-diagnosis", {
+            method: "POST",
+            body: JSON.stringify({
+              photoBase64: photoBeforeBase64,
+              description: desc,
+              organizationId: state.activeOrganizationId
+            })
+          });
+
+          if (res && res.diagnosis) {
+            const diagField = el('txt-diagnosis');
+            if (diagField) {
+              diagField.value = res.diagnosis;
+            }
+            showToast("IA: Diagnóstico Gerado", "Risco: " + res.riskLevel.toUpperCase() + " (" + Math.round(res.confidence * 100) + "% Confiança)", "success");
+          }
+        } catch(e) {
+          showToast("Erro", "Erro na análise de visão da IA: " + e.message, "error");
+        }
+      }
+
+      let voiceRecordTimer = null;
+      let voiceSeconds = 0;
+      let voiceTargetFieldId = "";
+
+      function startVoiceRecording(targetFieldId) {
+        voiceTargetFieldId = targetFieldId;
+        const overlay = el("voice-wave-overlay");
+        if (overlay) overlay.style.display = "flex";
+
+        voiceSeconds = 0;
+        const timerLabel = el("voice-wave-timer");
+        if (timerLabel) timerLabel.textContent = "00:00 / 00:30 (Fale de forma coloquial e clique em Parar)";
+
+        voiceRecordTimer = setInterval(() => {
+          voiceSeconds++;
+          const mins = String(Math.floor(voiceSeconds / 60)).padStart(2, '0');
+          const secs = String(voiceSeconds % 60).padStart(2, '0');
+          if (timerLabel) {
+            timerLabel.textContent = mins + ":" + secs + " / 00:30 (Fale de forma coloquial e clique em Parar)";
+          }
+          if (voiceSeconds >= 30) {
+            stopVoiceRecording();
+          }
+        }, 1000);
+      }
+
+      async function stopVoiceRecording() {
+        clearInterval(voiceRecordTimer);
+        const overlay = el("voice-wave-overlay");
+        if (overlay) overlay.style.display = "none";
+
+        // Prompt user dictate text simulation fallback
+        const spokenPrompt = window.prompt("🎙️ Transcrição de Áudio\nO que você gostaria de dizer? (IA vai reescrever em linguagem formal de engenharia):", "troquei o disjuntor queimado");
+        if (spokenPrompt === null) {
+          showToast("Aviso", "Gravação de voz cancelada.", "warning");
+          return;
+        }
+
+        showToast("IA: Processando Voz", "Reescrevendo em linguagem técnica formal corporativa...", "info");
+
+        try {
+          const res = await call("/ai/audio/transcribe", {
+            method: "POST",
+            body: JSON.stringify({
+              spokenPrompt,
+              organizationId: state.activeOrganizationId
+            })
+          });
+
+          if (res && res.transcription) {
+            const targetField = el(voiceTargetFieldId);
+            if (targetField) {
+              targetField.value = res.transcription;
+            }
+            showToast("IA: Áudio Transcrito", "Sucesso! Linguagem técnica incorporada.", "success");
+          }
+        } catch(e) {
+          showToast("Erro", "Erro ao transcrever voz: " + e.message, "error");
+        }
+      }
+
+      // SUBMIT EVENT LISTENERS
+      function attachDatabaseListeners() {
+
+        // MODAL OPEN / CLOSE EVENT LISTENERS FOR THE WORK ORDER FORM
+        el('btn-close-work-order-modal')?.addEventListener('click', () => {
+          el('work-order-modal').classList.remove('open');
+          resetWorkOrderForm();
+        });
+        
+        el('work-order-cancel-btn')?.addEventListener('click', () => {
+          el('work-order-modal').classList.remove('open');
+          resetWorkOrderForm();
+        });
+
+        // Trigger opening of work-order-modal on Nova OS click
+        document.querySelectorAll('[data-quick="work-order"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            resetWorkOrderForm();
+            el('work-order-modal-title').textContent = "🛠 Criar Nova Ordem de Serviço";
+            el('work-order-submit-btn').textContent = "Abrir OS";
+            el('work-order-modal').classList.add('open');
+          });
+        });
+
+        // Trigger opening of work-order-modal on Editar OS click
+        el('edit-work-order')?.addEventListener('click', () => {
+          const wo = activeWorkOrder();
+          if (!wo) return;
+          el('work-order-modal-title').textContent = "🛠 Editar Ordem de Serviço";
+          el('work-order-submit-btn').textContent = "Salvar Alterações";
+          el('work-order-modal').classList.add('open');
+        });
+
+
+        el('view-laudo-btn')?.addEventListener('click', viewLaudoTechnical);
+        el('share-whatsapp-btn')?.addEventListener('click', shareLaudoWhatsApp);
+        el('view-recibo-btn')?.addEventListener('click', viewReceiptTechnical);
+
+        el('btn-add-material-modal')?.addEventListener('click', () => el('material-create-modal').classList.add('open'));
+        el('btn-close-material-modal')?.addEventListener('click', () => el('material-create-modal').classList.remove('open'));
+        el('material-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const title = el('material-title-input').value.trim();
+          const unit = el('material-unit-select').value;
+          const value = Number(el('material-value-input').value || 0);
+          const marginEnabled = el('material-margin-toggle').checked;
+
+          const created = await call("/materials", {
+            method: "POST",
+            body: JSON.stringify({ title, unit, value, marginEnabled })
+          });
+          state.materials = [created.material, ...state.materials];
+          
+          el('material-create-modal').classList.remove('open');
+          el('material-create-form').reset();
+          renderMaterials();
+          renderToolsMetrics();
+          showToast("Material Cadastrado", "Material adicionado ao banco de dados com sucesso!", "success");
+        });
+
+        el('search-materials-input')?.addEventListener('input', (e) => {
+          renderMaterials(e.target.value);
+        });
+
+        el('btn-add-service-modal')?.addEventListener('click', () => el('service-create-modal').classList.add('open'));
+        el('btn-close-service-modal')?.addEventListener('click', () => el('service-create-modal').classList.remove('open'));
+        el('service-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const title = el('service-title-input').value.trim();
+          const hourlyEnabled = el('service-hourly-toggle').checked;
+          const value = Number(el('service-value-input').value || 0);
+
+          const created = await call("/services", {
+            method: "POST",
+            body: JSON.stringify({ title, hourlyEnabled, value })
+          });
+          state.services = [created.service, ...state.services];
+
+          el('service-create-modal').classList.remove('open');
+          el('service-create-form').reset();
+          renderServices();
+          renderToolsMetrics();
+          showToast("Serviço Cadastrado", "Serviço adicionado ao banco de dados com sucesso!", "success");
+        });
+
+        el('search-services-input')?.addEventListener('input', (e) => {
+          renderServices(e.target.value);
+        });
+
+        setupRealtimeTableFilter();
+
+        el('btn-open-category-modal')?.addEventListener('click', () => {
+          el('category-create-modal').classList.add('open');
+          initExpenseModalPickers();
+        });
+        el('btn-close-category-modal')?.addEventListener('click', () => el('category-create-modal').classList.remove('open'));
+        el('btn-cancel-category-creation')?.addEventListener('click', () => el('category-create-modal').classList.remove('open'));
+        el('category-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = el('category-name-input').value.trim();
+
+          const created = await call("/expense-categories", {
+            method: "POST",
+            body: JSON.stringify({ name, icon: selectedCategoryIcon, color: selectedCategoryColor })
+          });
+          state.expenseCategories = [...state.expenseCategories, created.category];
+
+          el('category-create-modal').classList.remove('open');
+          el('category-create-form').reset();
+          renderCategoriesGrid();
+          populateCategorySelect();
+          showToast("Categoria Criada", "Categoria salva no banco de dados com sucesso!", "success");
+        });
+
+        el('btn-open-expense-modal')?.addEventListener('click', () => {
+          el('expense-create-modal').classList.add('open');
+          populateCategorySelect();
+          el('expense-date-input').value = todayIso;
+        });
+        el('btn-close-expense-modal')?.addEventListener('click', () => el('expense-create-modal').classList.remove('open'));
+        el('btn-cancel-expense-creation')?.addEventListener('click', () => el('expense-create-modal').classList.remove('open'));
+        el('expense-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const description = el('expense-description-input').value.trim();
+          const value = Number(el('expense-value-input').value || 0);
+          const expenseDate = el('expense-date-input').value;
+          const categoryId = el('expense-category-select').value;
+
+          const created = await call("/expenses", {
+            method: "POST",
+            body: JSON.stringify({ description, value, expenseDate, categoryId })
+          });
+          state.expenses = [created.expense, ...state.expenses];
+
+          el('expense-create-modal').classList.remove('open');
+          el('expense-create-form').reset();
+          const filter = el('expense-month-filter');
+          renderExpensesLedger(filter ? filter.value : todayIso.slice(0, 7));
+          renderCategoriesGrid();
+          showToast("Gasto Registrado", "Despesa salva no banco de dados com sucesso!", "success");
+        });
+
+        el('expense-month-filter')?.addEventListener('change', (e) => {
+          renderExpensesLedger(e.target.value);
+        });
+
+        const originalNavigate = navigate;
+        navigate = function(tab) {
+          originalNavigate(tab);
+          if (tab === 'tools') {
+            renderToolsMetrics();
+            closeToolPanels();
+          } else if (tab === 'finance') {
+            populateExpenseMonthFilter();
+            renderCategoriesGrid();
+            const filter = el('expense-month-filter');
+            renderExpensesLedger(filter ? filter.value : todayIso.slice(0, 7));
+          } else if (tab === 'inventory') {
+            renderInventory();
+            renderShoppingList();
+          }
+        };
+
+        el('btn-add-client-modal')?.addEventListener('click', () => el('client-create-modal').classList.add('open'));
+        el('btn-close-client-modal')?.addEventListener('click', () => el('client-create-modal').classList.remove('open'));
+        el('client-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = el('client-name-input').value.trim();
+          const documentStr = el('client-doc-input').value.trim();
+          const phone = el('client-phone-input').value.trim();
+          const email = el('client-email-input').value.trim();
+          const address = el('client-address-input').value.trim();
+
+          const created = await call("/organizations", {
+            method: "POST",
+            body: JSON.stringify({ name, type: documentStr.length > 11 ? "corporate" : "private", document: documentStr, phone, email, address })
+          });
+
+          state.organizations = [created.organization, ...state.organizations];
+          renderSelectors();
+          
+          el('client-create-modal').classList.remove('open');
+          el('client-create-form').reset();
+          
+          // Auto-select newly created client in OS form context
+          await selectWorkOrderCustomer(created.organization.id);
+          
+          renderClientsList();
+          renderToolsMetrics();
+          showToast("Cliente Cadastrado", "Novo cliente criado e selecionado na OS com sucesso!", "success");
+        });
+
+        el('search-clients-input')?.addEventListener('input', (e) => {
+          renderClientsList(e.target.value);
+        });
+
+        setupAutocomplete('material-title-input', 'material-autocomplete-list', mockMaterialSuggestions);
+        setupAutocomplete('service-title-input', 'service-autocomplete-list', mockServiceSuggestions);
+        setupToolsHubHandlers();
+
+        // BIND FASE 3 INVENTORY EVENTS
+        el('btn-open-inventory-modal')?.addEventListener('click', () => el('inventory-create-modal').classList.add('open'));
+        el('btn-close-inventory-modal')?.addEventListener('click', () => el('inventory-create-modal').classList.remove('open'));
+        el('btn-cancel-inventory-creation')?.addEventListener('click', () => el('inventory-create-modal').classList.remove('open'));
+        
+        el('search-inventory-input')?.addEventListener('input', (e) => {
+          renderInventory(e.target.value);
+        });
+
+        el('btn-share-shopping-whatsapp')?.addEventListener('click', shareShoppingListWhatsApp);
+
+        el('inventory-create-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const materialName = el('inv-material-name').value.trim();
+          const quantity = Number(el('inv-quantity').value || 0);
+          const unit = el('inv-unit').value;
+          const minSafetyStock = Number(el('inv-min-safety').value || 0);
+          const unitCost = Number(el('inv-unit-cost').value || 0);
+
+          await call("/inventory", {
+            method: "POST",
+            body: JSON.stringify({
+              organizationId: state.activeOrganizationId,
+              materialName,
+              quantity,
+              unit,
+              minSafetyStock,
+              unitCost
+            })
+          });
+
+          el('inventory-create-modal').classList.remove('open');
+          el('inventory-create-form').reset();
+          showToast("Insumo Cadastrado", "Peça adicionada ao porta-malas com sucesso!", "success");
+          await renderInventory();
+          await renderShoppingList();
+        });
+
+        // BIND FASE 2 EVENT LISTENERS FOR BUDGET & COPILOTO
+        el('btn-suggest-regional')?.addEventListener('click', suggestRegionalPrice);
+        
+        const bForm = document.forms["budget-form"];
+        if (bForm) {
+          ['materialsTotal', 'laborTotal', 'durationHours', 'amount'].forEach(fieldName => {
+            bForm[fieldName]?.addEventListener('input', calculateMarginRealTime);
+            bForm[fieldName]?.addEventListener('change', calculateMarginRealTime);
+          });
+        }
+        el('budget-distance')?.addEventListener('input', calculateMarginRealTime);
+        el('budget-duration')?.addEventListener('input', calculateMarginRealTime);
+
+        // BIND FASE 4 AI AUDIO & VISION LISTENERS
+        el('btn-predictive-vision')?.addEventListener('click', runPredictiveVision);
+        
+        el('btn-mic-description')?.addEventListener('click', () => startVoiceRecording('txt-description'));
+        el('btn-mic-diagnosis')?.addEventListener('click', () => startVoiceRecording('txt-diagnosis'));
+        el('btn-stop-voice')?.addEventListener('click', stopVoiceRecording);
+      }
+
+      attachDatabaseListeners();
 
       load().catch((error) => {
         el("health-label").textContent = "API offline";

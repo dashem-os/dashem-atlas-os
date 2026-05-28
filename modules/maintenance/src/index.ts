@@ -4,7 +4,7 @@ import type { AtlasEntity, EntityId, ISODateTime, OperationalContext, Organizati
 import { createId, systemClock } from "@atlas/core-shared";
 
 export type WorkOrderPriority = "low" | "normal" | "high" | "urgent";
-export type WorkOrderState = "opened" | "scheduled" | "in_progress" | "waiting_budget" | "approved" | "rejected" | "closed" | "cancelled";
+export type WorkOrderState = "triage" | "opened" | "scheduled" | "visited" | "budget_draft" | "budget_sent" | "budget_rejected" | "approved" | "in_progress" | "rework" | "pending_acceptance" | "accepted" | "invoiced" | "warranty_active" | "closed" | "cancelled";
 export type ChecklistItemState = "open" | "done" | "blocked";
 export type EvidenceKind = "photo" | "document" | "note" | "measurement";
 export type BudgetState = "draft" | "submitted" | "approved" | "rejected";
@@ -441,7 +441,7 @@ export async function submitBudget(
     ...(command.notes ? { notes: command.notes } : {}),
     submittedAt: systemClock.now()
   };
-  const updated: WorkOrder = { ...workOrder, state: "waiting_budget", budget, updatedAt: systemClock.now() };
+  const updated: WorkOrder = { ...workOrder, state: "budget_sent", budget, updatedAt: systemClock.now() };
 
   await bus.publish(
     createEvent(

@@ -76,6 +76,23 @@ const html = String.raw`<!doctype html>
       .body { margin-top: 4px; color: #5b6264; }
       .tag { margin-top: 7px; color: #62746d; font-size: 12px; }
       pre { max-height: 180px; overflow: auto; background: #141719; color: #f8f1de; border-radius: 8px; padding: 14px; }
+      
+      /* Visual Drag & Drop feedback for Kanban columns */
+      .kanban-column {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      }
+      .kanban-column-valid {
+        border: 2px dashed #15803d !important;
+        background: #f0fdf4 !important;
+        box-shadow: 0 0 14px rgba(21, 128, 61, 0.18);
+        transform: scale(1.02);
+      }
+      .kanban-column-invalid {
+        opacity: 0.35;
+        filter: grayscale(60%);
+        pointer-events: none;
+      }
+
       @media (max-width: 900px) {
         main, .layout, header, .metrics, .runtime-grid { grid-template-columns: 1fr; }
         header { display: block; }
