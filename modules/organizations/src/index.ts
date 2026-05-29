@@ -17,7 +17,7 @@ export interface Organization extends AtlasEntity<OrganizationId> {
 
 export interface CreateOrganizationCommand {
   readonly name: string;
-  readonly slug: string;
+  readonly slug?: string;
   readonly type?: "corporate" | "private";
   readonly monthlyContractValue?: number;
   readonly targetSla?: number;
@@ -32,10 +32,17 @@ export async function createOrganization(
   bus: EventBus
 ): Promise<Organization> {
   const now = systemClock.now();
+  const rawSlug = command.slug || command.name || "org-" + Math.random().toString(36).slice(2, 8);
+  const safeSlug = rawSlug
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
   const organization: Organization = {
     id: createId<OrganizationId>("org"),
     name: command.name.trim(),
-    slug: command.slug.trim().toLowerCase(),
+    slug: safeSlug,
     ...(command.type ? { type: command.type } : {}),
     ...(command.monthlyContractValue !== undefined ? { monthlyContractValue: Number(command.monthlyContractValue) } : {}),
     ...(command.targetSla !== undefined ? { targetSla: Number(command.targetSla) } : {}),

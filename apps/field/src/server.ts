@@ -90,6 +90,7 @@ const html = String.raw`<!doctype html>
         border-right: 1px solid var(--line);
         background: var(--side-bg);
         backdrop-filter: blur(20px);
+        overflow-y: auto;
       }
 
       .brand { display: grid; gap: 6px; margin-bottom: 26px; }
@@ -1038,6 +1039,7 @@ const html = String.raw`<!doctype html>
       /* HIDE MOBILE BOTTOM NAV ON DESKTOP */
       @media (min-width: 981px) {
         .bottom { display: none !important; }
+        .profile-grid { grid-template-columns: 1fr 1fr !important; }
       }
 
       /* MEU AJUDANTE EXPENSES AND CATEGORIES STYLES */
@@ -1260,6 +1262,11 @@ const html = String.raw`<!doctype html>
           <button data-tab="admin"><span>⚙</span>Configurações</button>
           <button data-tab="admin"><span>⇄</span>Integrações</button>
           <button data-tab="admin"><span>□</span>Relatórios avançados</button>
+        </div>
+        <div class="side-group" style="margin-top: auto; border-top: 1px solid var(--line); padding-top: 14px;">
+          <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = window.location.origin.replace('5174', '5173') + '/login';" style="border: 1px solid rgba(239, 68, 68, 0.2); color: #ff5a65; background: rgba(239, 68, 68, 0.05); width: 100%; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 40px; border-radius: 8px; padding: 10px 12px;">
+            <span style="font-size: 16px;">⎋</span>Sair da Conta
+          </button>
         </div>
       </aside>
 
@@ -1783,6 +1790,13 @@ const html = String.raw`<!doctype html>
                 <span>Listagem de contatos e endereços</span>
               </div>
             </div>
+            <div class="op-card cyan" id="tool-calc-electric-btn" style="cursor: pointer; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(14, 165, 233, 0.12)) !important; border-color: rgba(6, 182, 212, 0.25) !important;">
+              <div class="op-icon" style="color: #22d3ee !important; text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);">⚡</div>
+              <div>
+                <strong>Calculadora Elétrica</strong>
+                <span>Bitola de cabo e disjuntor ideal para a OS</span>
+              </div>
+            </div>
           </div>
 
           <!-- Individual Tool Panels (Beautiful centered overlay modals!) -->
@@ -1805,6 +1819,63 @@ const html = String.raw`<!doctype html>
                   <img id="signature-preview-img" src="" style="border: 1px solid var(--line); border-radius: 8px; max-width: 100%; background: #fff;" />
                 </div>
               </div>
+            </div>
+          </div>
+          
+          <!-- 8. CALCULADORA ELÉTRICA MODAL (NBR 5410) -->
+          <div class="modal-overlay" id="panel-tool-electric" aria-hidden="true">
+            <div class="modal-card" style="max-width: 500px; padding: 24px;">
+              <header class="modal-header">
+                <h2 style="color: #22d3ee; margin: 0; display: flex; align-items: center; gap: 8px;">⚡ Calculadora Elétrica (NBR 5410)</h2>
+                <button class="secondary" onclick="closeToolPanels()" style="padding: 4px; border:none; background:none; font-size:20px; line-height:1; color: var(--text); cursor:pointer;">✕</button>
+              </header>
+              <form id="electric-calc-form" style="display: grid; gap: 12px; margin-top: 16px;">
+                <div class="inline" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <label style="font-size:12px;">
+                    Potência do Equipamento (W)
+                    <input type="number" id="calc-elec-power" required value="5000" min="1" style="width: 100%; font-size:13px;" />
+                  </label>
+                  <label style="font-size:12px;">
+                    Tensão da Rede (V)
+                    <select id="calc-elec-voltage" style="width: 100%; font-size:13px;">
+                      <option value="127">127 V (Monofásico)</option>
+                      <option value="220" selected>220 V (Fase-Fase/Monofásico)</option>
+                      <option value="380">380 V (Trifásico)</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="inline" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <label style="font-size:12px;">
+                    Comprimento do Cabo (m)
+                    <input type="number" id="calc-elec-length" required value="20" min="1" style="width: 100%; font-size:13px;" />
+                  </label>
+                  <label style="font-size:12px;">
+                    Instalação
+                    <select id="calc-elec-embedded" style="width: 100%; font-size:13px;">
+                      <option value="embedded" selected>Eletroduto Embutido (Parede/Laje)</option>
+                      <option value="exposed">Ao Ar Livre / Canaleta Aberta</option>
+                    </select>
+                  </label>
+                </div>
+                <button class="primary" type="button" id="btn-run-electric-calc" style="background: linear-gradient(135deg, #06b6d4, #0891b2) !important; color: #fff !important; border:none !important; font-weight:bold; font-size: 13px; min-height: 38px;">⚡ Calcular Dimensionamento</button>
+                
+                <!-- Display Results beautifully in premium Glassmorphic Box -->
+                <div id="electric-calc-results" style="margin-top: 14px; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; display: none;">
+                  <h4 style="margin: 0 0 8px; color: #22d3ee; font-size:14px; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:4px;">📋 Resultado do Dimensionamento</h4>
+                  <div style="display: grid; gap: 6px; font-size: 13px;">
+                    <div style="display: flex; justify-content: space-between;"><span>Corrente Nominal:</span><strong id="res-elec-current">0.00 A</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Queda de Tensão:</span><strong id="res-elec-drop">0.00%</strong></div>
+                    <div style="display: flex; justify-content: space-between; border-top:1px dashed rgba(255,255,255,0.15); padding-top:6px; margin-top:4px;">
+                      <span style="font-weight:bold; color: var(--amber);">Bitola do Cabo Recomendada:</span>
+                      <strong id="res-elec-wire" style="font-size:14px; color: var(--amber);">2.5 mm²</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="font-weight:bold; color: #22c55e;">Disjuntor Recomendado:</span>
+                      <strong id="res-elec-breaker" style="font-size:14px; color: #22c55e;">32 A</strong>
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
 
@@ -1983,84 +2054,95 @@ const html = String.raw`<!doctype html>
         </div>
 
         <div id="profile" class="view">
-          <div class="panel" style="max-width: 480px; margin: 0 auto 16px auto;">
-            <div class="panel-title">
-              <h2>Perfil do Usuário</h2>
-              <span class="chip" id="profile-pwa-role-badge">Técnico</span>
-            </div>
-            <form id="profile-form" style="display: grid; gap: 14px; margin-top: 16px;">
-              <label>
-                Nome do Usuário
-                <input name="userName" id="profile-user-name-input" required style="width: 100%;" />
-              </label>
-              <label>
-                Perfil / Cargo
-                <select name="userRole" id="profile-user-role-select" style="width: 100%;">
-                  <option value="Técnico">Técnico</option>
-                  <option value="Financeiro">Financeiro</option>
-                  <option value="Supervisor">Supervisor</option>
-                </select>
-              </label>
-              <button class="primary" type="submit" style="margin-top: 8px;">Salvar Perfil</button>
-            </form>
-          </div>
-
-          <div class="panel" style="max-width: 480px; margin: 0 auto 16px auto;">
-            <div class="panel-title">
-              <h2>Identidade do Recibo (Branding)</h2>
-              <span class="chip">Recibo</span>
-            </div>
-            <form id="branding-form" style="display: grid; gap: 14px; margin-top: 16px;">
-              <label>
-                Nome do Emissor / Empresa
-                <input name="emissorName" id="branding-emissor-name-input" required style="width: 100%;" placeholder="Ex: João Silva Serviços, Razão Social, MEI..." />
-              </label>
-              <label>
-                Tipo de Emissor
-                <select name="brandType" id="branding-brand-type-select" style="width: 100%;">
-                  <option value="AUTONOMO">Profissional Autônomo</option>
-                  <option value="MEI">Microempreendedor Individual (MEI)</option>
-                  <option value="FREELANCE">Freelancer</option>
-                  <option value="EMPRESA">Empresa Geral (Razão/Fantasia)</option>
-                </select>
-              </label>
-              <label>
-                Logotipo URL
-                <input name="logoUrl" id="branding-logo-url-input" style="width: 100%;" placeholder="https://exemplo.com/logo.png" />
-              </label>
-              <div class="inline">
-                <label>
-                  Telefone
-                  <input name="phone" id="branding-phone-input" style="width: 100%;" placeholder="(11) 99999-9999" />
-                </label>
-                <label>
-                  E-mail
-                  <input name="email" id="branding-email-input" type="email" style="width: 100%;" placeholder="contato@empresa.com" />
-                </label>
+          <div class="profile-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1000px; margin: 0 auto; width: 100%;">
+            
+            <!-- COLUMN 1: Profile & Status -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="panel" style="margin: 0;">
+                <div class="panel-title">
+                  <h2>Perfil do Usuário</h2>
+                  <span class="chip" id="profile-pwa-role-badge">Técnico</span>
+                </div>
+                <form id="profile-form" style="display: grid; gap: 14px; margin-top: 16px;">
+                  <label>
+                    Nome do Usuário
+                    <input name="userName" id="profile-user-name-input" required style="width: 100%;" />
+                  </label>
+                  <label>
+                    Perfil / Cargo
+                    <select name="userRole" id="profile-user-role-select" style="width: 100%;">
+                      <option value="Técnico">Técnico</option>
+                      <option value="Financeiro">Financeiro</option>
+                      <option value="Supervisor">Supervisor</option>
+                    </select>
+                  </label>
+                  <button class="primary" type="submit" style="margin-top: 8px;">Salvar Perfil</button>
+                  <button type="button" onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = window.location.origin.replace('5174', '5173') + '/login';" style="border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); color: #ff5a65; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; min-height: 40px; margin-top: 10px; font-size: 13px;">⎋ Sair do Aplicativo</button>
+                </form>
               </div>
-              <label>
-                Endereço
-                <input name="address" id="branding-address-input" style="width: 100%;" placeholder="Rua, número, bairro, cidade - UF" />
-              </label>
-              <label>
-                Chave Pix (para pagamentos do recibo)
-                <input name="pixKey" id="branding-pix-key-input" style="width: 100%;" placeholder="Ex: celular, email, CPF, chave aleatória" />
-              </label>
-              <label>
-                Termos da Garantia Padrão
-                <textarea name="warrantyTerms" id="branding-warranty-terms-textarea" style="width: 100%; height: 80px;" placeholder="Ex: Garantia de mão de obra de 90 dias a partir da entrega..."></textarea>
-              </label>
-              <button class="primary" type="submit" style="margin-top: 8px;">Salvar Identidade do Recibo</button>
-            </form>
-          </div>
 
-          <div class="panel" style="max-width: 480px; margin: 0 auto;">
-            <div class="panel-title"><h2>Status operacional</h2><span class="chip">PWA</span></div>
-            <div class="smart-slots">
-              <div class="slot"><strong>Instalável na tela inicial</strong><small>Interface priorizada para uso em campo e toque rápido.</small></div>
-              <div class="slot"><strong>Offline parcial</strong><small>Fluxos críticos podem evoluir para fila local quando a API estiver fora.</small></div>
-              <div class="slot"><strong>Notificações push</strong><small>Pronto para alertas de SLA, aprovação e chamados pendentes.</small></div>
+              <div class="panel" style="margin: 0;">
+                <div class="panel-title"><h2>Status operacional</h2><span class="chip">PWA</span></div>
+                <div class="smart-slots">
+                  <div class="slot"><strong>Instalável na tela inicial</strong><small>Interface priorizada para uso em campo e toque rápido.</small></div>
+                  <div class="slot"><strong>Offline parcial</strong><small>Fluxos críticos podem evoluir para fila local quando a API estiver fora.</small></div>
+                  <div class="slot"><strong>Notificações push</strong><small>Pronto para alertas de SLA, aprovação e chamados pendentes.</small></div>
+                </div>
+              </div>
             </div>
+
+            <!-- COLUMN 2: Receipt Branding -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="panel" style="margin: 0;">
+                <div class="panel-title">
+                  <h2>Identidade do Recibo (Branding)</h2>
+                  <span class="chip">Recibo</span>
+                </div>
+                <form id="branding-form" style="display: grid; gap: 14px; margin-top: 16px;">
+                  <label>
+                    Nome do Emissor / Empresa
+                    <input name="emissorName" id="branding-emissor-name-input" required style="width: 100%;" placeholder="Ex: João Silva Serviços, Razão Social, MEI..." />
+                  </label>
+                  <label>
+                    Tipo de Emissor
+                    <select name="brandType" id="branding-brand-type-select" style="width: 100%;">
+                      <option value="AUTONOMO">Profissional Autônomo</option>
+                      <option value="MEI">Microempreendedor Individual (MEI)</option>
+                      <option value="FREELANCE">Freelancer</option>
+                      <option value="EMPRESA">Empresa Geral (Razão/Fantasia)</option>
+                    </select>
+                  </label>
+                  <label>
+                    Logotipo URL
+                    <input name="logoUrl" id="branding-logo-url-input" style="width: 100%;" placeholder="https://exemplo.com/logo.png" />
+                  </label>
+                  <div class="inline">
+                    <label>
+                      Telefone
+                      <input name="phone" id="branding-phone-input" style="width: 100%;" placeholder="(11) 99999-9999" />
+                    </label>
+                    <label>
+                      E-mail
+                      <input name="email" id="branding-email-input" type="email" style="width: 100%;" placeholder="contato@empresa.com" />
+                    </label>
+                  </div>
+                  <label>
+                    Endereço
+                    <input name="address" id="branding-address-input" style="width: 100%;" placeholder="Rua, número, bairro, cidade - UF" />
+                  </label>
+                  <label>
+                    Chave Pix (para pagamentos do recibo)
+                    <input name="pixKey" id="branding-pix-key-input" style="width: 100%;" placeholder="Ex: celular, email, CPF, chave aleatória" />
+                  </label>
+                  <label>
+                    Termos da Garantia Padrão
+                    <textarea name="warrantyTerms" id="branding-warranty-terms-textarea" style="width: 100%; height: 80px;" placeholder="Ex: Garantia de mão de obra de 90 dias a partir da entrega..."></textarea>
+                  </label>
+                  <button class="primary" type="submit" style="margin-top: 8px;">Salvar Identidade do Recibo</button>
+                </form>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -2424,6 +2506,36 @@ const html = String.raw`<!doctype html>
       const htmlEscape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
       const dateLabel = (isoDate) => new Date(isoDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
       const dateTimeLabel = (isoDateTime) => new Date(isoDateTime).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+      const localDateStr = (isoString) => {
+        if (!isoString) return "";
+        try {
+          const d = new Date(isoString);
+          if (isNaN(d.getTime())) return "";
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return y + "-" + m + "-" + day;
+        } catch (e) {
+          return "";
+        }
+      };
+
+      const formatDueAt = (isoString) => {
+        if (!isoString) return "Sem prazo definido";
+        try {
+          const d = new Date(isoString);
+          if (isNaN(d.getTime())) return isoString;
+          const datePart = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+          const timePart = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          const offsetMin = d.getTimezoneOffset();
+          const offsetHours = -Math.round(offsetMin / 60);
+          const tzLabel = offsetHours >= 0 ? "+" + offsetHours : String(offsetHours);
+          return datePart + " às " + timePart + " (" + tzLabel + " UTC)";
+        } catch (e) {
+          return isoString;
+        }
+      };
 
       async function call(path, options) {
         const response = await fetch(apiBase + path, { headers: { "content-type": "application/json" }, ...options });
@@ -2839,27 +2951,52 @@ const html = String.raw`<!doctype html>
           const current = new Date(start);
           current.setDate(start.getDate() + index);
           const iso = current.toISOString().slice(0, 10);
-          const count = state.appointments.filter((item) => item.scheduledAt.slice(0, 10) === iso).length;
+          const aptsCount = state.appointments.filter((item) => item.scheduledAt.slice(0, 10) === iso).length;
+          const wosCount = state.workOrders.filter((wo) => wo.dueAt && localDateStr(wo.dueAt) === iso).length;
+          const totalCount = aptsCount + wosCount;
           const classes = [
             "calendar-day",
             current.getMonth() === month - 1 ? "" : "muted",
             iso === state.agendaDate ? "selected" : "",
-            count > 0 ? "has-items" : ""
+            totalCount > 0 ? "has-items" : ""
           ].filter(Boolean).join(" ");
-          days.push('<button class="' + classes + '" data-agenda-date="' + iso + '"><span class="day-number">' + current.getDate() + '</span><span class="day-count">' + (count ? count + " agendamento(s)" : "") + '</span></button>');
+          
+          let countLabel = "";
+          if (aptsCount > 0 && wosCount > 0) {
+            countLabel = aptsCount + " agend. + " + wosCount + " OS";
+          } else if (aptsCount > 0) {
+            countLabel = aptsCount + " agendamento(s)";
+          } else if (wosCount > 0) {
+            countLabel = wosCount + " venc. OS";
+          }
+
+          days.push('<button class="' + classes + '" data-agenda-date="' + iso + '"><span class="day-number">' + current.getDate() + '</span><span class="day-count">' + countLabel + '</span></button>');
         }
 
         el("agenda-calendar").innerHTML = days.join("");
-        const selected = state.appointments
+        
+        const selectedApts = state.appointments
           .filter((item) => item.scheduledAt.slice(0, 10) === state.agendaDate)
           .sort((a, b) => {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
             return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
           });
+          
+        const selectedWos = state.workOrders
+          .filter((wo) => wo.dueAt && localDateStr(wo.dueAt) === state.agendaDate);
+
         el("agenda-selected-title").textContent = dateLabel(state.agendaDate);
-        el("agenda-day-list").innerHTML = selected.length
-          ? selected.map((item) => {
+
+        let listHtml = "";
+        
+        if (selectedApts.length === 0 && selectedWos.length === 0) {
+          listHtml = '<div class="slot"><strong>Nenhum agendamento neste dia.</strong><small>Preencha o formulário para criar um compromisso rastreável.</small></div>';
+        } else {
+          // Render appointments first
+          if (selectedApts.length > 0) {
+            listHtml += '<div style="margin-top: 10px; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-soft); font-weight: bold;">📅 Compromissos</div>';
+            listHtml += selectedApts.map((item) => {
               const statusText = item.status === "scheduled" ? "Agendado" : item.status === "done" ? "Concluído" : "Cancelado";
               const badgeClass = item.status === "scheduled" ? "badge progress" : item.status === "done" ? "badge done" : "badge danger";
               const timeLabel = dateTimeLabel(item.scheduledAt);
@@ -2890,16 +3027,72 @@ const html = String.raw`<!doctype html>
                   '</button>' +
                 '</div>' +
               '</div>';
-            }).join("")
-          : '<div class="slot"><strong>Nenhum agendamento neste dia.</strong><small>Preencha o formulário para criar um compromisso rastreável.</small></div>';
+            }).join("");
+          }
+          
+          // Render due Work Orders
+          if (selectedWos.length > 0) {
+            listHtml += '<div style="margin-top: 14px; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--amber); font-weight: bold; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Vencimento de Ordem de Serviço (OS)</div>';
+            listHtml += selectedWos.map((wo) => {
+              const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
+              const asset = state.assets.find((item) => item.id === wo.assetId);
+              
+              let timeLabel = "Sem prazo";
+              if (wo.dueAt) {
+                try {
+                  const d = new Date(wo.dueAt);
+                  const tz = -Math.round(d.getTimezoneOffset() / 60);
+                  const tzLabel = tz >= 0 ? "+" + tz : String(tz);
+                  timeLabel = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + " (" + tzLabel + " UTC)";
+                } catch (e) {}
+              }
+              
+              const statusText = wo.state === "triage" ? "Triagem" : wo.state === "opened" ? "Aberta" : wo.state === "scheduled" ? "Agendada" : wo.state === "visited" ? "Visita Realizada" : wo.state === "budget_draft" ? "Orç. Rascunho" : wo.state === "budget_sent" ? "Orç. Enviado" : wo.state === "budget_rejected" ? "Orç. Recusado" : wo.state === "approved" ? "Aprovada" : wo.state === "in_progress" ? "Execução" : wo.state === "rework" ? "Retrabalho" : wo.state === "pending_acceptance" ? "Aceite Pendente" : wo.state === "accepted" ? "Aceita" : wo.state === "invoiced" ? "Faturada" : wo.state === "warranty_active" ? "Garantia Ativa" : wo.state === "closed" ? "Concluída" : "Cancelada";
+              
+              let stateTone = "var(--text-soft)";
+              if (["closed", "accepted", "invoiced", "warranty_active"].includes(wo.state)) stateTone = "#00f0c0";
+              else if (["in_progress", "rework"].includes(wo.state)) stateTone = "#0ea5e9";
+              else if (["triage", "opened", "scheduled"].includes(wo.state)) stateTone = "#e2e8f0";
+              else if (["budget_sent"].includes(wo.state)) stateTone = "#ffaf26";
+              else if (["budget_rejected"].includes(wo.state)) stateTone = "#ff4d4d";
+              
+              const badgeStyle = 'background: rgba(255,255,255,0.05); color: ' + stateTone + '; border: 1px solid ' + stateTone + '; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;';
 
-        document.querySelectorAll("div.slot-clickable").forEach((slotDiv) => {
+              return '<div class="slot slot-clickable" style="border-left: 3px solid var(--amber);" data-wo-link-id="' + wo.id + '">' +
+                '<span style="display: flex; justify-content: space-between; align-items: start; gap: 8px; width: 100%;">' +
+                  '<strong style="display: flex; align-items: center; color: var(--text); gap: 6px;">⏰ ' + htmlEscape(timeLabel) + ' - ' + htmlEscape(displayName) + '</strong>' +
+                  '<span style="' + badgeStyle + '">' + htmlEscape(statusText) + '</span>' +
+                '</span>' +
+                '<small style="margin-top: 4px; display: block; font-weight: bold; color: var(--text-soft);">' + htmlEscape(wo.title) + '</small>' +
+                '<small style="display: block; opacity: 0.85;">Cliente: ' + htmlEscape(activeOrganization()?.name || "") + ' · Ativo: ' + htmlEscape(asset?.name || wo.assetId) + '</small>' +
+                '<div style="margin-top: 8px; display: flex; justify-content: flex-end;">' +
+                  '<button class="secondary" style="font-size: 11px; padding: 4px 8px; min-height: auto;" data-wo-link-action="' + wo.id + '">Abrir Ordem de Serviço</button>' +
+                '</div>' +
+              '</div>';
+            }).join("");
+          }
+        }
+        
+        el("agenda-day-list").innerHTML = listHtml;
+
+        document.querySelectorAll("div.slot-clickable[data-appointment-id]").forEach((slotDiv) => {
           slotDiv.addEventListener("click", (e) => {
             if (e.target.closest(".slot-actions")) {
-              return; // let the action button click handler handle it
+              return;
             }
             const id = slotDiv.getAttribute("data-appointment-id");
             showAppointmentModal(id);
+          });
+        });
+
+        document.querySelectorAll("[data-wo-link-id], [data-wo-link-action]").forEach((element) => {
+          element.addEventListener("click", () => {
+            const woId = element.getAttribute("data-wo-link-id") || element.getAttribute("data-wo-link-action");
+            if (woId) {
+              state.activeWorkOrderId = woId;
+              navigate("orders");
+              render();
+            }
           });
         });
 
@@ -2930,7 +3123,6 @@ const html = String.raw`<!doctype html>
           });
         });
 
-        // Auto-sync Novo Agendamento form date with the selected agenda date
         if (!editingAppointmentId) {
           const form = el("appointment-form");
           if (form) {
@@ -3164,7 +3356,13 @@ const html = String.raw`<!doctype html>
             const asset = state.assets.find((item) => item.id === wo.assetId);
             const selected = wo.id === state.activeWorkOrderId ? " selected" : "";
             const displayName = wo.sequenceNumber ? wo.sequenceNumber : "OS #" + wo.id.substring(0, 8);
-            return '<button class="order-card' + selected + '" data-wo="' + wo.id + '"><span class="order-head"><strong>' + htmlEscape(displayName) + '</strong>' + stateBadge(wo) + '</span><p>Cliente: ' + htmlEscape(activeOrganization()?.name || "") + '</p><p>Equipamento: ' + htmlEscape(asset?.name || wo.assetId) + '</p><p>' + htmlEscape(wo.dueAt || "Sem prazo definido") + '</p></button>';
+            
+            const formattedDate = formatDueAt(wo.dueAt);
+            const dateBlock = wo.dueAt 
+              ? '<p style="margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--amber); font-weight: 500;"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> ' + htmlEscape(formattedDate) + '</p>'
+              : '<p style="margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-soft); font-weight: 500;"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; opacity: 0.6;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Sem prazo definido</p>';
+
+            return '<button class="order-card' + selected + '" data-wo="' + wo.id + '"><span class="order-head"><strong>' + htmlEscape(displayName) + '</strong>' + stateBadge(wo) + '</span><p>Cliente: ' + htmlEscape(activeOrganization()?.name || "") + '</p><p>Equipamento: ' + htmlEscape(asset?.name || wo.assetId) + '</p>' + dateBlock + '</button>';
           }).join("") || '<div class="slot"><strong>Nenhuma OS encontrada.</strong><small>Use o botao + para criar a primeira ordem.</small></div>';
 
           document.querySelectorAll("[data-wo]").forEach((row) => {
@@ -4479,7 +4677,7 @@ const html = String.raw`<!doctype html>
         const modal = el('evidence-modal');
         if (modal) {
           if (document.activeElement && modal.contains(document.activeElement)) {
-            (document.activeElement as HTMLElement).blur();
+            document.activeElement.blur();
           }
           modal.classList.remove('open');
           modal.setAttribute('aria-hidden', 'true');
@@ -4511,8 +4709,8 @@ const html = String.raw`<!doctype html>
           e.preventDefault();
           requireWorkOrder();
           
-          const titleInput = el("evidence-title-input") as HTMLInputElement;
-          const notesInput = el("evidence-notes-input") as HTMLTextAreaElement;
+          const titleInput = el("evidence-title-input");
+          const notesInput = el("evidence-notes-input");
           
           const title = titleInput ? titleInput.value.trim() : "";
           const notes = notesInput ? notesInput.value.trim() : "";
@@ -4569,23 +4767,110 @@ const html = String.raw`<!doctype html>
       el("diagnosis-agent").addEventListener("click", runDiagnosisAgent);
       el("budget-agent").addEventListener("click", runBudgetAgent);
 
+      function showGlassmorphicConfirm(title, message) {
+        return new Promise((resolve) => {
+          const overlay = document.createElement("div");
+          overlay.style.position = "fixed";
+          overlay.style.top = "0";
+          overlay.style.left = "0";
+          overlay.style.width = "100vw";
+          overlay.style.height = "100vh";
+          overlay.style.backdropFilter = "blur(12px)";
+          overlay.style.webkitBackdropFilter = "blur(12px)";
+          overlay.style.backgroundColor = "rgba(10, 20, 30, 0.6)";
+          overlay.style.display = "flex";
+          overlay.style.alignItems = "center";
+          overlay.style.justifyContent = "center";
+          overlay.style.zIndex = "9999";
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 0.3s ease";
+
+          const card = document.createElement("div");
+          card.style.background = "rgba(255, 255, 255, 0.08)";
+          card.style.backdropFilter = "blur(20px)";
+          card.style.webkitBackdropFilter = "blur(20px)";
+          card.style.border = "1px solid rgba(255, 255, 255, 0.15)";
+          card.style.borderRadius = "16px";
+          card.style.padding = "24px";
+          card.style.maxWidth = "420px";
+          card.style.width = "90%";
+          card.style.boxShadow = "0 20px 50px rgba(0, 0, 0, 0.5)";
+          card.style.color = "#ffffff";
+          card.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          card.style.textAlign = "center";
+          card.style.transform = "scale(0.9)";
+          card.style.transition = "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+          card.innerHTML = 
+            '<div style="font-size: 32px; margin-bottom: 12px;">💸</div>' +
+            '<h3 style="margin: 0 0 10px; font-size: 18px; font-weight: 700; color: #38bdf8; letter-spacing: -0.3px;">' + htmlEscape(title) + '</h3>' +
+            '<p style="margin: 0 0 20px; font-size: 13px; line-height: 1.5; color: #e2e8f0; opacity: 0.95;">' + htmlEscape(message) + '</p>' +
+            '<div style="display: flex; gap: 10px; justify-content: center;">' +
+              '<button id="glass-confirm-no" style="flex:1; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s;">Preencher do Zero</button>' +
+              '<button id="glass-confirm-yes" style="flex:1; border: none; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); transition: opacity 0.2s;">Importar Dados</button>' +
+            '</div>';
+
+          overlay.appendChild(card);
+          document.body.appendChild(overlay);
+
+          // Force reflow
+          overlay.offsetHeight;
+          overlay.style.opacity = "1";
+          card.style.transform = "scale(1)";
+
+          const closeWith = (val) => {
+            overlay.style.opacity = "0";
+            card.style.transform = "scale(0.9)";
+            setTimeout(() => {
+              overlay.remove();
+              resolve(val);
+            }, 300);
+          };
+
+          overlay.querySelector("#glass-confirm-no").addEventListener("click", () => closeWith(false));
+          overlay.querySelector("#glass-confirm-yes").addEventListener("click", () => closeWith(true));
+          
+          const btnNo = overlay.querySelector("#glass-confirm-no");
+          const btnYes = overlay.querySelector("#glass-confirm-yes");
+          btnNo.addEventListener("mouseenter", () => { btnNo.style.background = "rgba(255,255,255,0.12)"; });
+          btnNo.addEventListener("mouseleave", () => { btnNo.style.background = "rgba(255,255,255,0.05)"; });
+          btnYes.addEventListener("mouseenter", () => { btnYes.style.opacity = "0.9"; });
+          btnYes.addEventListener("mouseleave", () => { btnYes.style.opacity = "1"; });
+        });
+      }
+
       el("submit-budget").addEventListener("click", async () => {
         requireWorkOrder();
         const wo = activeWorkOrder();
         if (!wo) return;
+
+        const hasMaterials = wo.materials && wo.materials.length > 0;
+        const hasLabor = wo.laborCost !== undefined && Number(wo.laborCost) > 0;
+
+        let importData = true;
+        if (hasMaterials || hasLabor) {
+          importData = await showGlassmorphicConfirm(
+            "Importar dados da OS?",
+            "Identificamos que esta OS já possui materiais e/ou custos de mão de obra vinculados. Deseja importar essas informações para compor o orçamento automaticamente?"
+          );
+        }
         
         el('work-order-modal').classList.add('open');
         el('work-order-modal-title').textContent = "💸 Composição de Orçamento — " + (wo.sequenceNumber || "OS");
         
-        state.formMaterials = JSON.parse(JSON.stringify(wo.materials || []));
+        state.formMaterials = importData ? JSON.parse(JSON.stringify(wo.materials || [])) : [];
         renderFormMaterials();
         
         const form = document.forms["budget-form"];
-        form.querySelector('[name="materialsTotal"]').value = (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
-        form.querySelector('[name="laborTotal"]').value = wo.laborCost !== undefined ? wo.laborCost : "";
-        form.querySelector('[name="durationHours"]').value = wo.estimatedDurationHours !== undefined ? wo.estimatedDurationHours : "";
-        form.querySelector('[name="notes"]').value = (wo.budget && wo.budget.notes) ? wo.budget.notes : "";
-        form.querySelector('[name="amount"]').value = (wo.budget && wo.budget.amount) ? wo.budget.amount : "";
+        const materialsTotal = importData ? (wo.materials || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0) : 0;
+        const laborTotal = importData && wo.laborCost !== undefined ? Number(wo.laborCost) : 0;
+        const calculatedTotal = materialsTotal + laborTotal;
+
+        form.querySelector('[name="materialsTotal"]').value = materialsTotal;
+        form.querySelector('[name="laborTotal"]').value = importData && wo.laborCost !== undefined ? wo.laborCost : "";
+        form.querySelector('[name="durationHours"]').value = importData && wo.estimatedDurationHours !== undefined ? wo.estimatedDurationHours : "";
+        form.querySelector('[name="notes"]').value = (wo.budget && wo.budget.notes) ? wo.budget.notes : (importData ? (wo.description || wo.title || "") : "");
+        form.querySelector('[name="amount"]').value = (wo.budget && wo.budget.amount) ? wo.budget.amount : (calculatedTotal > 0 ? calculatedTotal : "");
         
         if (typeof calculateMarginRealTime === "function") {
           calculateMarginRealTime();
@@ -5389,6 +5674,88 @@ const html = String.raw`<!doctype html>
           el('res-travel-total').textContent = money(total);
         }
 
+        el('tool-calc-electric-btn')?.addEventListener('click', () => {
+          el('panel-tool-electric').classList.add('open');
+        });
+
+        function calculateElectricDimensioning() {
+          const power = Number(el('calc-elec-power').value || 0);
+          const voltage = Number(el('calc-elec-voltage').value || 220);
+          const length = Number(el('calc-elec-length').value || 0);
+          const installation = el('calc-elec-embedded').value;
+
+          if (power <= 0 || length <= 0) return;
+
+          // 1. Nominal Current
+          let current = 0;
+          if (voltage === 380) {
+            current = power / (voltage * Math.sqrt(3) * 0.92);
+          } else {
+            current = power / (voltage * 0.95);
+          }
+
+          // 2. Wire Gauge NBR 5410 PBC
+          const wireSizes = [1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0];
+          const embeddedAmpacity = [17.5, 24, 32, 41, 57, 76, 101];
+          const exposedAmpacity = [22, 30, 40, 51, 70, 94, 125];
+          const ampacities = installation === 'embedded' ? embeddedAmpacity : exposedAmpacity;
+          
+          let wireIdx = 0;
+          for (let i = 0; i < wireSizes.length; i++) {
+            if (ampacities[i] >= current) {
+              wireIdx = i;
+              break;
+            }
+            if (i === wireSizes.length - 1) {
+              wireIdx = i;
+            }
+          }
+
+          // 3. Breaker Coordination
+          const standardBreakers = [10, 16, 20, 25, 32, 40, 50, 63, 70, 80, 100];
+          let selectedBreaker = 10;
+          for (let i = 0; i < standardBreakers.length; i++) {
+            if (standardBreakers[i] >= current) {
+              selectedBreaker = standardBreakers[i];
+              break;
+            }
+            if (i === standardBreakers.length - 1) {
+              selectedBreaker = standardBreakers[i];
+            }
+          }
+
+          while (selectedBreaker > ampacities[wireIdx] && wireIdx < wireSizes.length - 1) {
+            wireIdx++;
+          }
+
+          // 4. Voltage Drop
+          let dropPercent = 0;
+          let s = wireSizes[wireIdx];
+          
+          while (wireIdx < wireSizes.length - 1) {
+            s = wireSizes[wireIdx];
+            if (voltage === 380) {
+              dropPercent = (Math.sqrt(3) * length * current * 0.92) / (58 * s * voltage) * 100;
+            } else {
+              dropPercent = (2 * length * current * 0.95) / (58 * s * voltage) * 100;
+            }
+            
+            if (dropPercent <= 4.0) {
+              break;
+            }
+            wireIdx++;
+          }
+
+          // Update UI
+          el('res-elec-current').textContent = current.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' A';
+          el('res-elec-drop').textContent = dropPercent.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' %';
+          el('res-elec-wire').textContent = wireSizes[wireIdx] + ' mm²';
+          el('res-elec-breaker').textContent = selectedBreaker + ' A';
+          el('electric-calc-results').style.display = 'block';
+        }
+
+        el('btn-run-electric-calc')?.addEventListener('click', calculateElectricDimensioning);
+
         ['travel-distance', 'travel-efficiency', 'travel-fuel-price', 'travel-other-costs'].forEach(id => {
           el(id)?.addEventListener('input', calculateFuelCost);
         });
@@ -5483,6 +5850,18 @@ const html = String.raw`<!doctype html>
                 '<div class="data-item"><span>Título da OS</span><strong>' + htmlEscape(wo.title) + '</strong></div>' +
                 '<div class="data-item"><span>Técnico Responsável</span><strong>' + htmlEscape(wo.technicianName || "Marcelo Atlas") + '</strong></div>' +
                 '<div class="data-item" style="grid-column: span 2;"><span>Descrição Técnica Executada</span><strong style="font-weight:normal;">' + htmlEscape(wo.description || "Nenhuma descrição técnica detalhada informada.") + '</strong></div>' +
+              '</div>' +
+
+              '<div class="section-title">Laudo Técnico Detalhado</div>' +
+              '<div style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:16px;">' +
+                '<div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px;">' +
+                  '<strong style="color:#0369a1; display:block; font-size:12px; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">🔍 Constatações Técnicas (Laudo Inicial)</strong>' +
+                  '<p style="margin:0; font-size:13px; color:#1e293b; white-space:pre-wrap;">' + htmlEscape(wo.laudoInicial || "Diagnóstico inicial não preenchido ou não requerido para esta ordem.") + '</p>' +
+                '</div>' +
+                '<div style="padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">' +
+                  '<strong style="color:#15803d; display:block; font-size:12px; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">✅ Conclusão dos Serviços (Laudo Final)</strong>' +
+                  '<p style="margin:0; font-size:13px; color:#1e293b; white-space:pre-wrap;">' + htmlEscape(wo.laudoFinal || "Conclusão técnica final não preenchida ou aguardando finalização.") + '</p>' +
+                '</div>' +
               '</div>' +
 
               '<div class="section-title">Comprovação Visual (Antes e Depois)</div>' +
@@ -5703,9 +6082,20 @@ const html = String.raw`<!doctype html>
               '</div>' +
 
               '<div class="section-title">Descrição dos Serviços e Peças</div>' +
-              '<div style="font-size:13px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:16px;">' +
+              '<div style="font-size:13px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:12px;">' +
                 '<strong style="color:#111827; display:block; margin-bottom:4px;">' + htmlEscape(wo.title) + '</strong>' +
                 '<span style="color:#4b5563;">' + htmlEscape(wo.description || "Atendimento e serviços prestados sem descrição detalhada.") + '</span>' +
+              '</div>' +
+
+              '<div style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:16px;">' +
+                (wo.laudoInicial ? '<div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px;">' +
+                  '<strong style="color:#475569; display:block; margin-bottom:2px;">🔍 Constatações Iniciais (Laudo)</strong>' +
+                  '<span style="color:#334155; white-space:pre-wrap;">' + htmlEscape(wo.laudoInicial) + '</span>' +
+                '</div>' : '') +
+                (wo.laudoFinal ? '<div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px;">' +
+                  '<strong style="color:#475569; display:block; margin-bottom:2px;">✅ Solução / Conclusão Técnica</strong>' +
+                  '<span style="color:#334155; white-space:pre-wrap;">' + htmlEscape(wo.laudoFinal) + '</span>' +
+                '</div>' : '') +
               '</div>' +
 
               '<table>' +
@@ -6277,9 +6667,10 @@ const html = String.raw`<!doctype html>
           const email = el('client-email-input').value.trim();
           const address = el('client-address-input').value.trim();
 
+          const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Math.random().toString(36).substring(2, 6);
           const created = await call("/organizations", {
             method: "POST",
-            body: JSON.stringify({ name, type: documentStr.length > 11 ? "corporate" : "private", document: documentStr, phone, email, address })
+            body: JSON.stringify({ name, slug, type: documentStr.length > 11 ? "corporate" : "private", document: documentStr, phone, email, address })
           });
 
           state.organizations = [created.organization, ...state.organizations];
