@@ -2814,6 +2814,10 @@ const html = String.raw`<!doctype html>
         showToast("Sincronização", "Sincronizando " + queue.length + " operações offline...", "info");
         
         for (const item of queue) {
+          if (item.value.path && item.value.path.startsWith("/auth/")) {
+            await dbDeleteQueue(item.key);
+            continue;
+          }
           try {
             const sessionStr = localStorage.getItem("atlas_login_session");
             const headers = { 

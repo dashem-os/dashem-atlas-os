@@ -1248,7 +1248,8 @@ const server = createServer(async (request, response) => {
                             normalizedSession === "owner" || 
                             normalizedSession === "dashem" || 
                             normalizedSession === "owner@dashem.com" || 
-                            normalizedSession === "admin@dashem.com";
+                            normalizedSession === "admin@dashem.com" ||
+                            normalizedSession === "marcelo@dashem.com";
       if (!isOwner && !isPreapproved) {
         send(response, 403, { error: "forbidden", message: "Privilégios administrativos insuficientes no banco." });
         return;
