@@ -714,7 +714,7 @@ function send(response: ServerResponse, statusCode: number, body: unknown): void
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
-    "access-control-allow-headers": "content-type,x-request-id,x-organization-id,x-user-id,x-tenant-code,x-tenant-slug,x-owner-session"
+    "access-control-allow-headers": "content-type,authorization,x-request-id,x-organization-id,x-user-id,x-tenant-code,x-tenant-slug,x-owner-session"
   });
   response.end(statusCode === 204 ? undefined : JSON.stringify(body, null, 2));
 }
