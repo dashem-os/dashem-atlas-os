@@ -83,6 +83,10 @@ const html = String.raw`<!doctype html>
       h1, h2, h3, p { margin: 0; }
       p { color: var(--text-soft); line-height: 1.45; }
 
+      body.not-logged-in > *:not(#login-view) {
+        display: none !important;
+      }
+
       .app {
         min-height: 100vh;
         display: grid;
@@ -7298,6 +7302,7 @@ const html = String.raw`<!doctype html>
         const loginContainer = el("login-view");
 
         if (sessionStr) {
+          document.body.classList.remove("not-logged-in");
           appContainer.style.display = "grid";
           loginContainer.style.display = "none";
           
@@ -7306,6 +7311,7 @@ const html = String.raw`<!doctype html>
           
           await load(); 
         } else {
+          document.body.classList.add("not-logged-in");
           appContainer.style.display = "none";
           loginContainer.style.display = "flex";
           showPinVerifyPhase();
