@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -2502,7 +2502,7 @@ const html = String.raw`<!doctype html>
       <button data-tab="profile"><b>○</b><span>Perfil</span></button>
     </nav>
 
-    <!-- PWA PIN & Setup View -->
+    <!-- PWA Unified Login View -->
     <div id="login-view" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: var(--body-bg);">
       <div class="panel" style="width: 100%; max-width: 380px; padding: 28px; border-radius: 16px; text-align: center; box-shadow: var(--shadow);">
         <div class="brand" style="margin-bottom: 24px;">
@@ -2511,58 +2511,17 @@ const html = String.raw`<!doctype html>
           <span style="letter-spacing: 0.15em; font-size: 11px;">Parceiro de Campo</span>
         </div>
 
-        <!-- Fase 1: Pareamento por E-mail -->
-        <div id="login-phase-email" style="display: grid; gap: 14px;">
-          <p style="font-size: 13px; margin-bottom: 10px;">Entre com suas credenciais para parear este dispositivo móvel.</p>
-          <label style="text-align: left;">
-            E-mail
-            <input type="email" id="login-email" placeholder="tecnico@dashem.com" required style="margin-top: 5px;" />
+        <div id="login-form-pwa" style="display: grid; gap: 14px;">
+          <p style="font-size: 13px; margin-bottom: 10px; color: var(--text-soft);">Acesse informando seu número de celular e PIN.</p>
+          <label style="text-align: left; display: grid; gap: 6px; font-weight: 500;">
+            Celular
+            <input type="tel" id="login-phone" placeholder="(11) 99999-9999" required style="width: 100%; min-height: 40px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; font-size: 16px;" />
           </label>
-          <label style="text-align: left;">
-            Código do Tenant / Empresa
-            <input type="text" id="login-tenant" placeholder="#00 (Deixe em branco se autônomo)" style="margin-top: 5px;" />
+          <label style="text-align: left; display: grid; gap: 6px; font-weight: 500;">
+            PIN de Acesso
+            <input type="password" id="login-pin" maxlength="4" placeholder="4 dígitos" required style="width: 100%; min-height: 40px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; text-align: center; letter-spacing: 0.5em; font-size: 16px;" />
           </label>
-          <button class="primary" id="btn-login-email" style="width: 100%; min-height: 44px; margin-top: 10px;">Avançar</button>
-        </div>
-
-        <!-- Fase 2: Configuração do PIN (Primeiro pareamento) -->
-        <div id="login-phase-pin-setup" style="display: none; grid-gap: 14px;">
-          <p style="font-size: 13px; margin-bottom: 10px;">Cadastre seu PIN de segurança de 4 dígitos para desbloqueio rápido em campo.</p>
-          <div style="display: flex; justify-content: center; gap: 12px; margin: 10px 0;">
-            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-1" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
-            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-2" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
-            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-3" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
-            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-4" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
-          </div>
-          <button class="primary" id="btn-save-pin-setup" style="width: 100%; min-height: 44px; margin-top: 10px;">Confirmar PIN</button>
-        </div>
-
-        <!-- Fase 3: Desbloqueio Rápido por PIN (Uso Diário) -->
-        <div id="login-phase-pin-verify" style="display: none; grid-gap: 14px;">
-          <p id="pin-user-greeting" style="font-size: 14px; font-weight: bold; margin-bottom: 4px;">Olá, Técnico</p>
-          <p style="font-size: 12px; margin-bottom: 12px;">Digite seu PIN de 4 dígitos para entrar.</p>
-          
-          <div style="display: flex; justify-content: center; gap: 16px; margin: 10px 0 20px;">
-            <div class="pin-dot" id="pin-dot-1" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
-            <div class="pin-dot" id="pin-dot-2" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
-            <div class="pin-dot" id="pin-dot-3" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
-            <div class="pin-dot" id="pin-dot-4" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 240px; margin: 0 auto;">
-            <button type="button" class="num-key" data-val="1" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">1</button>
-            <button type="button" class="num-key" data-val="2" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">2</button>
-            <button type="button" class="num-key" data-val="3" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">3</button>
-            <button type="button" class="num-key" data-val="4" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">4</button>
-            <button type="button" class="num-key" data-val="5" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">5</button>
-            <button type="button" class="num-key" data-val="6" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">6</button>
-            <button type="button" class="num-key" data-val="7" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">7</button>
-            <button type="button" class="num-key" data-val="8" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">8</button>
-            <button type="button" class="num-key" data-val="9" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">9</button>
-            <button type="button" id="btn-clear-pin" style="height: 50px; border-radius: 8px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: var(--danger); cursor: pointer;">Limpar</button>
-            <button type="button" class="num-key" data-val="0" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">0</button>
-            <button type="button" id="btn-switch-user" style="height: 50px; border-radius: 8px; font-size: 11px; font-weight: bold; border: none; background: transparent; color: var(--text-soft); cursor: pointer;">Parear</button>
-          </div>
+          <button class="primary" id="btn-login-pwa" style="width: 100%; min-height: 44px; margin-top: 10px; border-radius: 8px; font-weight: bold; font-size: 16px;">Entrar</button>
         </div>
       </div>
     </div>
@@ -7188,112 +7147,75 @@ const html = String.raw`<!doctype html>
       }
 
       function setupPinFlow() {
-        el("btn-login-email")?.addEventListener("click", async () => {
-          const email = el("login-email").value.trim();
-          if (!email) {
-            showToast("Erro", "Informe seu e-mail de pareamento.", "danger");
+        // Ensure deviceToken exists in localStorage
+        let deviceToken = localStorage.getItem("atlas_device_token");
+        if (!deviceToken) {
+          deviceToken = "dev_" + Math.random().toString(36).substring(2, 18);
+          localStorage.setItem("atlas_device_token", deviceToken);
+        }
+
+        // Apply dynamic phone mask (e.g. (11) 99999-9999)
+        const phoneInput = el("login-phone");
+        if (phoneInput) {
+          phoneInput.addEventListener("input", (e) => {
+            let x = e.target.value.replace(/\D/g, "").match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : "(" + x[1] + ") " + x[2] + (x[3] ? "-" + x[3] : "");
+          });
+        }
+
+        const loginFormSubmit = async () => {
+          const phone = el("login-phone").value.trim();
+          const pin = el("login-pin").value.trim();
+
+          if (!phone || !pin) {
+            showToast("Erro", "Preencha o celular e o PIN.", "danger");
             return;
           }
-
-          try {
-            const apiBaseUrl = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
-            const summaryRes = await fetch(apiBaseUrl + "/owner/summary");
-            const summaryData = await summaryRes.json();
-            const grants = summaryData.accessGrants || [];
-
-            const userGrant = grants.find(g => g.email.toLowerCase() === email.toLowerCase());
-            if (!userGrant) {
-              throw new Error("Usuário não possui convite ou acesso cadastrado.");
-            }
-
-            el("login-phase-email").style.display = "none";
-            el("login-phase-pin-verify").style.display = "none";
-            el("login-phase-pin-setup").style.display = "grid";
-
-            const inputs = document.querySelectorAll(".pin-digit-input");
-            inputs.forEach((input, index) => {
-              input.addEventListener("input", (e) => {
-                if (e.target.value.length === 1 && index < inputs.length - 1) {
-                  inputs[index + 1].focus();
-                }
-              });
-              input.addEventListener("keydown", (e) => {
-                if (e.key === "Backspace" && e.target.value.length === 0 && index > 0) {
-                  inputs[index - 1].focus();
-                }
-              });
-            });
-            inputs[0].focus();
-          } catch (err) {
-            showToast("Falha de Acesso", err.message || "Erro de conexão.", "danger");
-          }
-        });
-
-        el("btn-save-pin-setup")?.addEventListener("click", async () => {
-          const pin1 = el("pin-setup-1").value;
-          const pin2 = el("pin-setup-2").value;
-          const pin3 = el("pin-setup-3").value;
-          const pin4 = el("pin-setup-4").value;
-          const pin = pin1 + pin2 + pin3 + pin4;
 
           if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-            showToast("Erro", "O PIN deve possuir 4 dígitos numéricos.", "danger");
+            showToast("Erro", "O PIN deve ter exatamente 4 dígitos.", "danger");
             return;
           }
 
-          const email = el("login-email").value.trim();
-          const deviceToken = "dev_" + Math.random().toString(36).substring(2, 18);
-
           try {
-            await call("/auth/pin/setup", {
+            const res = await call("/auth/pin/verify", {
               method: "POST",
-              body: JSON.stringify({ email, pin, deviceToken })
+              body: JSON.stringify({
+                phone,
+                pin,
+                deviceToken
+              })
             });
 
-            localStorage.setItem("atlas_device_profile", JSON.stringify({
-              email,
-              deviceToken,
-              name: email.split("@")[0].toUpperCase()
-            }));
+            if (res.ok && res.token) {
+              const session = {
+                username: res.user.name,
+                target: res.user.isStandalone ? "field" : "enterprise",
+                tenantCode: res.user.tenantCode,
+                email: res.user.email,
+                token: res.token,
+                user: res.user,
+                issuedAt: new Date().toISOString()
+              };
+              localStorage.setItem("atlas_login_session", JSON.stringify(session));
+              
+              toggleFieldViewMode(res.user.isStandalone);
 
-            showToast("Sucesso", "Pareamento realizado e PIN cadastrado!", "success");
-            
-            el("login-phase-pin-setup").style.display = "none";
-            showPinVerifyPhase();
-          } catch (err) {
-            showToast("Erro", err.message || "Falha ao registrar PIN.", "danger");
-          }
-        });
-
-        document.querySelectorAll(".num-key").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            const val = e.currentTarget.dataset.val;
-            if (val !== undefined) {
-              handleNumKeyPress(val);
+              showToast("Bem-vindo", "Acesso liberado com sucesso!", "success");
+              await checkAuthAndInitialize();
             }
-          });
-        });
+          } catch (err) {
+            showToast("Falha de Login", err.message || "Erro na autenticação.", "danger");
+          }
+        };
 
-        el("btn-clear-pin")?.addEventListener("click", resetPinVerification);
-        
-        el("btn-switch-user")?.addEventListener("click", () => {
-          localStorage.removeItem("atlas_device_profile");
-          el("login-phase-pin-verify").style.display = "none";
-          el("login-phase-email").style.display = "grid";
+        el("btn-login-pwa")?.addEventListener("click", loginFormSubmit);
+        el("login-pin")?.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") loginFormSubmit();
         });
-      }
-
-      function showPinVerifyPhase() {
-        const deviceProfile = JSON.parse(localStorage.getItem("atlas_device_profile") || "{}");
-        if (deviceProfile.email) {
-          el("login-phase-email").style.display = "none";
-          el("login-phase-pin-setup").style.display = "none";
-          el("login-phase-pin-verify").style.display = "grid";
-          el("pin-user-greeting").textContent = "Olá, " + deviceProfile.name;
-        } else {
-          el("login-phase-pin-verify").style.display = "none";
-          el("login-phase-email").style.display = "grid";
-        }
+        el("login-phone")?.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") el("login-pin").focus();
+        });
       }
 
       async function checkAuthAndInitialize() {
@@ -7314,7 +7236,6 @@ const html = String.raw`<!doctype html>
           document.body.classList.add("not-logged-in");
           appContainer.style.display = "none";
           loginContainer.style.display = "flex";
-          showPinVerifyPhase();
         }
       }
 
@@ -7337,7 +7258,10 @@ function listen(port: number): void {
 
     if (url === "/manifest.json") {
       try {
-        const manifestPath = join(__dirname, "manifest.json");
+        let manifestPath = join(__dirname, "manifest.json");
+        if (!existsSync(manifestPath)) {
+          manifestPath = join(__dirname, "..", "src", "manifest.json");
+        }
         const content = readFileSync(manifestPath, "utf8");
         response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
         response.end(content);
@@ -7351,7 +7275,10 @@ function listen(port: number): void {
 
     if (url === "/sw.js") {
       try {
-        const swPath = join(__dirname, "sw.js");
+        let swPath = join(__dirname, "sw.js");
+        if (!existsSync(swPath)) {
+          swPath = join(__dirname, "..", "src", "sw.js");
+        }
         const content = readFileSync(swPath, "utf8");
         response.writeHead(200, { "content-type": "application/javascript; charset=utf-8" });
         response.end(content);

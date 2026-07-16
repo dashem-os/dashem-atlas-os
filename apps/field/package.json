@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node -e \"import('fs').then(fs => { fs.copyFileSync('src/manifest.json', 'dist/manifest.json'); fs.copyFileSync('src/sw.js', 'dist/sw.js'); })\"",
     "dev": "npm run build && node dist/server.js",
     "start": "node dist/server.js"
   }

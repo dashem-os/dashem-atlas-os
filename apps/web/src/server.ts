@@ -707,7 +707,7 @@ const loginHtml = String.raw`<!doctype html>
       async function loadEnvironments() {
         try {
           const apiBase = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
-          const res = await fetch(apiBase + "/owner/summary");
+          const res = await fetch(apiBase + "/owner/summary", { headers: { "x-owner-session": "owner" } });
           const data = await res.json();
           const select = document.querySelector("#environment-select");
           const tenants = data.tenants || [];
@@ -1220,6 +1220,7 @@ const ownerHtml = String.raw`<!doctype html>
         <nav aria-label="Owner navigation">
           <a class="active" href="#dashboard" data-view-link="dashboard">◇ Dashboard</a>
           <a href="#saas" data-view-link="saas">▣ Gerenciamento SaaS</a>
+          <a href="#pwa" data-view-link="pwa">▣ Hub PWA</a>
           <a href="/login">□ Login</a>
           <a href="/" title="Ambiente Enterprise em teste">▣ Enterprise test</a>
           <div id="sidebar-tenants" style="margin-top:14px; display:grid; gap:8px; border-top:1px solid var(--line); padding-top:14px;"></div>
@@ -1291,6 +1292,54 @@ const ownerHtml = String.raw`<!doctype html>
             </form>
           </aside>
         </div>
+
+        <div class="layout view" id="pwa-view" hidden>
+          <section class="panel">
+            <div class="panel-title">
+              <h2>Usuários PWA</h2>
+              <span class="chip" id="pwa-count">Carregando</span>
+            </div>
+            <div class="tenant-list" id="pwa-list" style="display:grid; gap:10px;"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>Detalhes do Técnico PWA</h2>
+              <span class="chip" id="pwa-state">Aguardando</span>
+            </div>
+            <div id="pwa-detail" class="empty-state">
+              <h3>Nenhum usuário PWA selecionado</h3>
+              <p>Selecione um técnico para gerenciar celular, PIN, pareamento de dispositivo e permissões.</p>
+            </div>
+          </section>
+
+          <aside class="panel">
+            <div class="panel-title">
+              <h3>Habilitar Novo Acesso PWA</h3>
+              <span class="chip">Hub PWA</span>
+            </div>
+            <form id="pwa-form" class="form-grid">
+              <label class="form-grid-full">Nome do Técnico<input name="name" required placeholder="Nome completo" /></label>
+              <label class="form-grid-full">Email<input name="email" type="email" required placeholder="tecnico@cliente.com" /></label>
+              <label class="form-grid-full">Celular (Login PWA)<input name="phone" required placeholder="(11) 99999-9999" /></label>
+              <label class="form-grid-full">PIN Inicial (4 dígitos)<input name="pin" required pattern="\d{4}" maxlength="4" placeholder="Ex: 1234" /></label>
+              <label class="form-grid-full">Empresa / Tenant (Associação)
+                <select name="tenantId" id="pwa-tenant-select">
+                  <option value="">-- Autônomo (Sem Tenant) --</option>
+                </select>
+              </label>
+              <label class="form-grid-full">Perfil / Cargo
+                <select name="role">
+                  <option value="technician">Técnico</option>
+                  <option value="manager">Gestor</option>
+                  <option value="admin">Admin</option>
+                  <option value="viewer">Leitura</option>
+                </select>
+              </label>
+              <button class="primary form-grid-full" type="submit">Habilitar Técnico</button>
+            </form>
+          </aside>
+        </div>
       </main>
     </div>
 
@@ -1304,14 +1353,31 @@ const ownerHtml = String.raw`<!doctype html>
       const tenantState = document.querySelector("#tenant-state");
       const bars = document.querySelector("#owner-bars");
       const kpis = document.querySelector("#owner-kpis");
+      const pwaList = document.querySelector("#pwa-list");
+      const pwaCount = document.querySelector("#pwa-count");
+      const pwaDetail = document.querySelector("#pwa-detail");
+      const pwaState = document.querySelector("#pwa-state");
+      const pwaTenantSelect = document.querySelector("#pwa-tenant-select");
+      let selectedPwaGrantId = "";
+      let isEditingPwaGrant = false;
       let currentTenants = [];
       let currentGrants = [];
       let selectedTenantId = "";
       let isEditingTenant = false;
       let editingAccessGrantId = null;
 
-      async function call(path, options) {
-        const response = await fetch(apiBase + path, { headers: { "content-type": "application/json" }, ...options });
+      async function call(path, options = {}) {
+        const sessionStr = localStorage.getItem("atlas_login_session");
+        const session = sessionStr ? JSON.parse(sessionStr) : null;
+        const ownerSession = session?.email || session?.username || "owner";
+        const response = await fetch(apiBase + path, {
+          ...options,
+          headers: {
+            "content-type": "application/json",
+            "x-owner-session": ownerSession,
+            ...(options.headers || {})
+          }
+        });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.message || data.error || "HTTP " + response.status);
         return data;
@@ -1359,6 +1425,33 @@ const ownerHtml = String.raw`<!doctype html>
         ).join("") || '<article class="tenant-card"><h3>Nenhum tenant criado</h3><p>Crie o primeiro acesso SaaS.</p></article>';
 
         renderTenantDetail(tenants.find((tenant) => tenant.id === selectedTenantId) || tenants[0]);
+
+        // PWA Hub
+        pwaTenantSelect.innerHTML = '<option value="">-- Autônomo (Sem Tenant) --</option>' + tenants.map(function(t) { return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.name) + ' (' + escapeHtml(t.code) + ')</option>'; }).join("");
+        
+        const pwaGrants = currentGrants;
+        pwaCount.textContent = pwaGrants.length + " acessos";
+
+        pwaList.innerHTML = pwaGrants.map(function(grant) {
+          const tenant = tenants.find(function(t) { return t.id === grant.tenantId; });
+          const tenantName = tenant ? tenant.name + " (" + tenant.code + ")" : "Autônomo";
+          const hasPin = !!grant.pinHash;
+          const hasDevice = !!grant.deviceToken;
+          const isSelected = grant.id === selectedPwaGrantId;
+          return '<article class="tenant-card ' + (isSelected ? 'selected' : '') + '" data-pwa-grant-id="' + escapeHtml(grant.id) + '">' +
+            '<header><h3>' + escapeHtml(grant.name) + '</h3><span class="tenant-code">' + escapeHtml(grant.role.toUpperCase()) + '</span></header>' +
+            '<div class="tenant-meta">' +
+              '<span class="tag">' + escapeHtml(tenantName) + '</span>' +
+              '<span class="tag">' + escapeHtml(grant.phone || 'Sem Celular') + '</span>' +
+              '<span class="tag">' + (hasPin ? 'PIN: Ativo' : 'PIN: Ausente') + '</span>' +
+              '<span class="tag">' + (hasDevice ? 'Aparelho: Pareado' : 'Aparelho: Não Pareado') + '</span>' +
+              '<span class="tag">' + escapeHtml(grant.status) + '</span>' +
+            '</div>' +
+            '<p>' + escapeHtml(grant.email) + '</p>' +
+          '</article>';
+        }).join("") || '<article class="tenant-card"><h3>Nenhum técnico cadastrado</h3><p>Habilite o primeiro técnico.</p></article>';
+
+        renderPwaDetail(pwaGrants.find(function(g) { return g.id === selectedPwaGrantId; }) || pwaGrants[0]);
       }
 
       function renderDashboard(totals) {
@@ -1488,6 +1581,67 @@ const ownerHtml = String.raw`<!doctype html>
           '</section>';
       }
 
+      function renderPwaDetail(grant) {
+        if (!grant) {
+          pwaState.textContent = "Aguardando";
+          pwaDetail.className = "empty-state";
+          pwaDetail.innerHTML = '<h3>Nenhum usuário PWA selecionado</h3><p>Selecione um técnico para gerenciar.</p>';
+          return;
+        }
+        pwaState.textContent = grant.status || "active";
+        pwaDetail.className = "";
+        
+        const tenant = currentTenants.find(function(t) { return t.id === grant.tenantId; });
+        const tenantName = tenant ? tenant.name + " (" + tenant.code + ")" : "Autônomo (Sem Tenant)";
+
+        if (isEditingPwaGrant) {
+          pwaDetail.innerHTML = 
+            '<form class="edit-pwa-form" id="edit-pwa-form" style="display:grid; gap:10px; max-width:440px;">' +
+              '<h3>Editar Usuário PWA</h3>' +
+              '<label style="display:grid; gap:4px;">Nome<input name="name" required value="' + escapeHtml(grant.name) + '" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff;" /></label>' +
+              '<label style="display:grid; gap:4px;">Email<input name="email" type="email" required value="' + escapeHtml(grant.email) + '" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff;" /></label>' +
+              '<label style="display:grid; gap:4px;">Celular (Login)<input name="phone" required value="' + escapeHtml(grant.phone || "") + '" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff;" /></label>' +
+              '<label style="display:grid; gap:4px;">Definir Novo PIN (4 dígitos - em branco para manter)<input name="pin" pattern="\\d{4}" maxlength="4" placeholder="Ex: 1234" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff; text-align:center; letter-spacing:0.4em;" /></label>' +
+              '<label style="display:grid; gap:4px;">Perfil / Cargo' +
+                '<select name="role" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff;">' +
+                  '<option value="technician"' + (grant.role === "technician" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Técnico</option>' +
+                  '<option value="manager"' + (grant.role === "manager" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Gestor</option>' +
+                  '<option value="admin"' + (grant.role === "admin" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Admin</option>' +
+                  '<option value="viewer"' + (grant.role === "viewer" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Leitura</option>' +
+                '</select>' +
+              '</label>' +
+              '<label style="display:grid; gap:4px;">Status' +
+                '<select name="status" style="min-height:36px; padding:0 8px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,0.2); color:#fff;">' +
+                  '<option value="active"' + (grant.status === "active" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Ativo</option>' +
+                  '<option value="suspended"' + (grant.status === "suspended" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Pausado</option>' +
+                  '<option value="invited"' + (grant.status === "invited" ? " selected" : "") + ' style="background:#02080d; color:#fff;">Convidado</option>' +
+                '</select>' +
+              '</label>' +
+              '<div class="form-actions" style="margin-top:14px; display:flex; gap:10px;">' +
+                '<button class="primary" type="submit" style="min-height:36px; padding:0 16px; border-radius:6px; font-weight:bold; cursor:pointer;">Salvar Alterações</button>' +
+                '<button class="secondary cancel-pwa-edit" type="button" style="min-height:36px; padding:0 16px; border-radius:6px; cursor:pointer;">Cancelar</button>' +
+              '</div>' +
+            '</form>';
+          return;
+        }
+
+        pwaDetail.innerHTML = 
+          '<div class="detail-grid">' +
+            '<div class="detail-box"><small>ID de Acesso</small><strong>' + escapeHtml(grant.id) + '</strong></div>' +
+            '<div class="detail-box"><small>Celular (Login)</small><strong>' + escapeHtml(grant.phone || "não cadastrado") + '</strong></div>' +
+            '<div class="detail-box"><small>PIN cadastrado?</small><strong>' + (grant.pinHash ? "Sim (Ativo)" : "Não (Ausente)") + '</strong></div>' +
+            '<div class="detail-box"><small>Associação</small><strong>' + escapeHtml(tenantName) + '</strong></div>' +
+            '<div class="detail-box"><small>Email</small><strong>' + escapeHtml(grant.email) + '</strong></div>' +
+            '<div class="detail-box"><small>Perfil</small><strong>' + escapeHtml(grant.role.toUpperCase()) + '</strong></div>' +
+            '<div class="detail-box" style="grid-column: span 2;"><small>Aparelho Vinculado (Device Token)</small><strong style="font-family:monospace; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(grant.deviceToken || "Nenhum dispositivo pareado") + '</strong></div>' +
+          '</div>' +
+          '<div class="permission-list" style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">' +
+            '<button class="primary pwa-edit-toggle" type="button">Editar Cadastro</button>' +
+            (grant.deviceToken ? '<button class="primary pwa-clear-device" type="button" style="background:var(--danger); border-color:var(--danger);">Desconectar Aparelho</button>' : "") +
+            '<button class="primary pwa-delete-grant" type="button" style="background:transparent; border-color:var(--danger); color:var(--danger);">Excluir Acesso</button>' +
+          '</div>';
+      }
+
       async function refresh() {
         try {
           render(await call("/owner/summary"));
@@ -1508,7 +1662,59 @@ const ownerHtml = String.raw`<!doctype html>
         renderTenantDetail(currentTenants.find((tenant) => tenant.id === selectedTenantId));
       });
 
+      pwaList.addEventListener("click", (event) => {
+        const card = event.target.closest("[data-pwa-grant-id]");
+        if (!card) return;
+        selectedPwaGrantId = card.dataset.pwaGrantId;
+        isEditingPwaGrant = false;
+        pwaList.querySelectorAll(".tenant-card").forEach((item) => item.classList.toggle("selected", item.dataset.pwaGrantId === selectedPwaGrantId));
+        renderPwaDetail(currentGrants.find((g) => g.id === selectedPwaGrantId));
+      });
+
       document.addEventListener("click", async (event) => {
+        if (event.target.closest(".pwa-edit-toggle")) {
+          isEditingPwaGrant = true;
+          renderPwaDetail(currentGrants.find(g => g.id === selectedPwaGrantId));
+          return;
+        }
+        if (event.target.closest(".cancel-pwa-edit")) {
+          isEditingPwaGrant = false;
+          renderPwaDetail(currentGrants.find(g => g.id === selectedPwaGrantId));
+          return;
+        }
+        if (event.target.closest(".pwa-clear-device")) {
+          const grant = currentGrants.find(g => g.id === selectedPwaGrantId);
+          if (grant && confirm("Deseja realmente desconectar o aparelho deste técnico?")) {
+            notice.textContent = "Removendo pareamento...";
+            try {
+              await call("/owner/access-grants/" + encodeURIComponent(grant.id), {
+                method: "PATCH",
+                body: JSON.stringify({ deviceToken: "" })
+              });
+              notice.textContent = "Pareamento removido com sucesso.";
+              await refresh();
+            } catch (error) {
+              notice.textContent = "Erro: " + error.message;
+            }
+          }
+          return;
+        }
+        if (event.target.closest(".pwa-delete-grant")) {
+          const grant = currentGrants.find(g => g.id === selectedPwaGrantId);
+          if (grant && confirm("Excluir o acesso PWA de " + grant.name + "?")) {
+            notice.textContent = "Excluindo acesso...";
+            try {
+              await call("/owner/access-grants/" + encodeURIComponent(grant.id), { method: "DELETE" });
+              selectedPwaGrantId = "";
+              notice.textContent = "Acesso excluído com sucesso.";
+              await refresh();
+            } catch (error) {
+              notice.textContent = "Erro: " + error.message;
+            }
+          }
+          return;
+        }
+
         const tenant = currentTenants.find((item) => item.id === selectedTenantId);
         if (!tenant) return;
         const statusButton = event.target.closest(".tenant-action");
@@ -1571,9 +1777,10 @@ const ownerHtml = String.raw`<!doctype html>
       });
 
       function switchView(view) {
-        const target = view === "saas" ? "saas" : "dashboard";
+        const target = view === "saas" ? "saas" : view === "pwa" ? "pwa" : "dashboard";
         document.querySelector("#dashboard-view").hidden = target !== "dashboard";
         document.querySelector("#saas-view").hidden = target !== "saas";
+        document.querySelector("#pwa-view").hidden = target !== "pwa";
         document.querySelectorAll("[data-view-link]").forEach((link) => link.classList.toggle("active", link.dataset.viewLink === target));
       }
 
@@ -1651,6 +1858,53 @@ const ownerHtml = String.raw`<!doctype html>
             });
             editingAccessGrantId = null;
             notice.textContent = "Acesso atualizado com sucesso.";
+            await refresh();
+          } catch (error) {
+            notice.textContent = "Erro: " + error.message;
+          }
+        } else if (form.id === "pwa-form") {
+          event.preventDefault();
+          const data = Object.fromEntries(new FormData(form).entries());
+          notice.textContent = "Habilitando acesso PWA...";
+          try {
+            const res = await call("/owner/access-grants", {
+              method: "POST",
+              body: JSON.stringify({
+                tenantId: data.tenantId || "tn_field_00",
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                pin: data.pin,
+                role: data.role
+              })
+            });
+            form.reset();
+            selectedPwaGrantId = res.grant.id;
+            notice.textContent = "Acesso PWA habilitado com sucesso.";
+            await refresh();
+          } catch (error) {
+            notice.textContent = "Erro: " + error.message;
+          }
+        } else if (form.id === "edit-pwa-form") {
+          event.preventDefault();
+          const grant = currentGrants.find(g => g.id === selectedPwaGrantId);
+          if (!grant) return;
+          const data = Object.fromEntries(new FormData(form).entries());
+          notice.textContent = "Atualizando usuário PWA...";
+          try {
+            await call("/owner/access-grants/" + encodeURIComponent(grant.id), {
+              method: "PATCH",
+              body: JSON.stringify({
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                pin: data.pin || undefined,
+                role: data.role,
+                status: data.status
+              })
+            });
+            isEditingPwaGrant = false;
+            notice.textContent = "Usuário PWA atualizado com sucesso.";
             await refresh();
           } catch (error) {
             notice.textContent = "Erro: " + error.message;

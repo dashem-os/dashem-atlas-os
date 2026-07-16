@@ -150,6 +150,8 @@ async function migratePostgres(): Promise<void> {
     alter table users add column if not exists device_token text;
     alter table atlas_access_grants add column if not exists pin_hash text;
     alter table atlas_access_grants add column if not exists device_token text;
+    alter table atlas_access_grants add column if not exists phone text;
+    create index if not exists atlas_access_grants_phone_idx on atlas_access_grants (phone);
 
     alter table work_orders add column if not exists technician_name text;
     alter table work_orders add column if not exists diagnosis text;
@@ -542,6 +544,7 @@ interface AtlasAccessGrant {
   readonly tenantCode: string;
   readonly name: string;
   readonly email: string;
+  readonly phone?: string;
   readonly role: "owner" | "admin" | "manager" | "technician" | "viewer";
   readonly status: "invited" | "active" | "suspended";
   readonly permissions: readonly string[];
@@ -549,6 +552,8 @@ interface AtlasAccessGrant {
   readonly updatedAt: ISODateTime;
   readonly lastLoginAt?: ISODateTime;
   readonly data: Record<string, unknown>;
+  readonly pinHash?: string;
+  readonly deviceToken?: string;
 }
 type AppointmentStatus = "scheduled" | "done" | "cancelled";
 interface FieldAppointment {
@@ -959,13 +964,16 @@ function accessGrantFromRow(row: QueryResultRow): AtlasAccessGrant {
     tenantCode: row.tenant_code,
     name: row.name,
     email: row.email,
+    phone: row.phone ?? undefined,
     role: row.role as AtlasAccessGrant["role"],
     status: row.status as AtlasAccessGrant["status"],
     permissions: fromJson<string[]>(row.permissions ?? []),
     createdAt: new Date(row.created_at).toISOString() as ISODateTime,
     updatedAt: new Date(row.updated_at).toISOString() as ISODateTime,
     data: fromJson<Record<string, unknown>>(row.data ?? {}),
-    ...(row.last_login_at ? { lastLoginAt: new Date(row.last_login_at).toISOString() as ISODateTime } : {})
+    ...(row.last_login_at ? { lastLoginAt: new Date(row.last_login_at).toISOString() as ISODateTime } : {}),
+    pinHash: row.pin_hash ?? undefined,
+    deviceToken: row.device_token ?? undefined
   };
 }
 
@@ -978,15 +986,18 @@ async function listAccessGrantRecords(tenantId?: string): Promise<AtlasAccessGra
 
 async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAccessGrant> {
   await pgPool.query(
-    `insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at, last_login_at, data)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at, last_login_at, data, phone, pin_hash, device_token)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      on conflict (tenant_id, email) do update set
        name = excluded.name,
        role = excluded.role,
        status = excluded.status,
        permissions = excluded.permissions,
        updated_at = excluded.updated_at,
-       data = excluded.data`,
+       data = excluded.data,
+       phone = excluded.phone,
+       pin_hash = excluded.pin_hash,
+       device_token = excluded.device_token`,
     [
       grant.id,
       grant.tenantId,
@@ -999,7 +1010,10 @@ async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAcce
       grant.createdAt,
       grant.updatedAt,
       grant.lastLoginAt ?? null,
-      json(grant.data)
+      json(grant.data),
+      grant.phone ?? null,
+      grant.pinHash ?? null,
+      grant.deviceToken ?? null
     ]
   );
   const [saved] = (await listAccessGrantRecords(grant.tenantId)).filter((item) => item.email === grant.email);
@@ -1991,6 +2005,8 @@ const server = createServer(async (request, response) => {
         tenantId: string;
         name: string;
         email: string;
+        phone?: string;
+        pin?: string;
         role?: AtlasAccessGrant["role"];
         permissions?: string[];
       }>(request);
@@ -2000,18 +2016,22 @@ const server = createServer(async (request, response) => {
         return;
       }
       const now = systemClock.now();
+      const pinHash = payload.pin ? await hashPin(payload.pin) : undefined;
       const grant: AtlasAccessGrant = {
         id: createId("ag"),
         tenantId: tenant.id,
         tenantCode: tenant.code,
         name: payload.name.trim(),
         email: payload.email.trim().toLowerCase(),
+        phone: payload.phone?.trim() || undefined as any,
         role: payload.role ?? "admin",
-        status: "invited",
+        status: "active",
         permissions: payload.permissions?.filter(Boolean) ?? tenant.permissions,
         createdAt: now,
         updatedAt: now,
-        data: { createdBy: "owner", source: "owner_dashboard" }
+        data: { createdBy: "owner", source: "owner_dashboard" },
+        pinHash: pinHash || undefined as any,
+        deviceToken: undefined as any
       };
       send(response, 201, { grant: await saveAccessGrantRecord(grant) });
       return;
@@ -2023,6 +2043,9 @@ const server = createServer(async (request, response) => {
       const payload = await readJson<{
         name?: string;
         email?: string;
+        phone?: string;
+        pin?: string;
+        deviceToken?: string;
         role?: AtlasAccessGrant["role"];
         status?: AtlasAccessGrant["status"];
         permissions?: string[];
@@ -2051,10 +2074,13 @@ const server = createServer(async (request, response) => {
         ...grant,
         name: payload.name !== undefined ? payload.name.trim() : grant.name,
         email,
+        phone: payload.phone !== undefined ? (payload.phone?.trim() || undefined as any) : grant.phone,
         role: payload.role !== undefined ? payload.role : grant.role,
         status: payload.status !== undefined ? payload.status : grant.status,
         permissions: payload.permissions !== undefined ? payload.permissions.filter(Boolean) : grant.permissions,
-        updatedAt: systemClock.now()
+        updatedAt: systemClock.now(),
+        pinHash: payload.pin !== undefined ? (payload.pin ? await hashPin(payload.pin) : undefined as any) : grant.pinHash,
+        deviceToken: payload.deviceToken !== undefined ? (payload.deviceToken || undefined as any) : grant.deviceToken
       };
 
       await pgPool.query(
@@ -2064,8 +2090,11 @@ const server = createServer(async (request, response) => {
            role = $3,
            status = $4,
            permissions = $5,
-           updated_at = $6
-         where id = $7`,
+           updated_at = $6,
+           phone = $7,
+           pin_hash = $8,
+           device_token = $9
+         where id = $10`,
         [
           updatedGrant.name,
           updatedGrant.email,
@@ -2073,6 +2102,9 @@ const server = createServer(async (request, response) => {
           updatedGrant.status,
           json(updatedGrant.permissions),
           updatedGrant.updatedAt,
+          updatedGrant.phone ?? null,
+          updatedGrant.pinHash ?? null,
+          updatedGrant.deviceToken ?? null,
           updatedGrant.id
         ]
       );
@@ -2271,20 +2303,68 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/auth/pwa/check") {
+      const payload = await readJson<{ phone: string }>(request);
+      if (!payload.phone) {
+        send(response, 400, { error: "bad_request", message: "phone is required." });
+        return;
+      }
+      const rawPhone = payload.phone.trim();
+      const cleanPhone = rawPhone.replace(/\D/g, "");
+      const res = await pgPool.query(
+        `select * from atlas_access_grants 
+         where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+           and status = 'active'
+         limit 1`,
+        [rawPhone, cleanPhone]
+      );
+      if (res.rowCount === 0) {
+        send(response, 404, { error: "not_found", message: "Celular não cadastrado ou sem permissão PWA." });
+        return;
+      }
+      const grant = res.rows[0];
+      send(response, 200, {
+        ok: true,
+        name: grant.name,
+        email: grant.email,
+        phone: grant.phone,
+        pinConfigured: !!grant.pin_hash,
+        tenantCode: grant.tenant_code
+      });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/auth/pin/setup") {
-      const payload = await readJson<{ email: string; pin: string; deviceToken: string }>(request);
-      if (!payload.email || !payload.pin || !payload.deviceToken) {
-        send(response, 400, { error: "bad_request", message: "email, pin and deviceToken are required." });
+      const payload = await readJson<{ email?: string; phone?: string; pin: string; deviceToken: string }>(request);
+      if ((!payload.email && !payload.phone) || !payload.pin || !payload.deviceToken) {
+        send(response, 400, { error: "bad_request", message: "email or phone, pin and deviceToken are required." });
         return;
       }
       
-      const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
-      if (res.rowCount === 0) {
-        send(response, 404, { error: "not_found", message: "User not found." });
-        return;
+      let grant;
+      if (payload.email) {
+        const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
+        if (res.rowCount === 0) {
+          send(response, 404, { error: "not_found", message: "Usuário não encontrado por email." });
+          return;
+        }
+        grant = res.rows[0];
+      } else if (payload.phone) {
+        const rawPhone = payload.phone.trim();
+        const cleanPhone = rawPhone.replace(/\D/g, "");
+        const res = await pgPool.query(
+          `select * from atlas_access_grants 
+           where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+           limit 1`,
+          [rawPhone, cleanPhone]
+        );
+        if (res.rowCount === 0) {
+          send(response, 404, { error: "not_found", message: "Usuário não encontrado por celular." });
+          return;
+        }
+        grant = res.rows[0];
       }
 
-      const grant = res.rows[0];
       try {
         const pinHash = await hashPin(payload.pin);
         await pgPool.query(
@@ -2299,26 +2379,38 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/auth/pin/verify") {
-      const payload = await readJson<{ email: string; pin: string; deviceToken: string }>(request);
-      if (!payload.email || !payload.pin || !payload.deviceToken) {
-        send(response, 400, { error: "bad_request", message: "email, pin and deviceToken are required." });
+      const payload = await readJson<{ email?: string; phone?: string; pin: string; deviceToken: string }>(request);
+      if ((!payload.email && !payload.phone) || !payload.pin || !payload.deviceToken) {
+        send(response, 400, { error: "bad_request", message: "email or phone, pin and deviceToken are required." });
         return;
       }
 
-      const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
-      if (res.rowCount === 0) {
-        send(response, 401, { error: "unauthorized", message: "Credenciais inválidas." });
-        return;
+      let grant;
+      if (payload.email) {
+        const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
+        if (res.rowCount === 0) {
+          send(response, 401, { error: "unauthorized", message: "Credenciais inválidas." });
+          return;
+        }
+        grant = res.rows[0];
+      } else if (payload.phone) {
+        const rawPhone = payload.phone.trim();
+        const cleanPhone = rawPhone.replace(/\D/g, "");
+        const res = await pgPool.query(
+          `select * from atlas_access_grants 
+           where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+           limit 1`,
+          [rawPhone, cleanPhone]
+        );
+        if (res.rowCount === 0) {
+          send(response, 401, { error: "unauthorized", message: "Credenciais inválidas." });
+          return;
+        }
+        grant = res.rows[0];
       }
 
-      const grant = res.rows[0];
       if (grant.status !== "active") {
         send(response, 401, { error: "unauthorized", message: "Usuário inativo." });
-        return;
-      }
-
-      if (!grant.device_token || grant.device_token !== payload.deviceToken) {
-        send(response, 401, { error: "unauthorized", message: "Dispositivo não pareado." });
         return;
       }
 
@@ -2331,6 +2423,14 @@ const server = createServer(async (request, response) => {
       if (!isValid) {
         send(response, 401, { error: "unauthorized", message: "PIN incorreto." });
         return;
+      }
+
+      // Auto-pairing: update device token if it is empty, or if it has changed, auto-pair it seamlessly
+      if (grant.device_token !== payload.deviceToken) {
+        await pgPool.query(
+          "update atlas_access_grants set device_token = $1, updated_at = now() where id = $2",
+          [payload.deviceToken, grant.id]
+        );
       }
 
       const jwtSecret = process.env.ATLAS_JWT_SECRET ?? "change-me-before-production";
