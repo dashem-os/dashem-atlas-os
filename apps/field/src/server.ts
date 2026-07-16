@@ -1,4 +1,9 @@
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const preferredPort = Number(process.env.ATLAS_FIELD_PORT ?? 5174);
 
@@ -8,6 +13,8 @@ const html = String.raw`<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#07131c" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='192' height='192'><rect width='512' height='512' rx='100' fill='%2307131c'/><text x='50%' y='62%' font-size='280' font-family='Arial, sans-serif' font-weight='bold' fill='%2300f0c0' text-anchor='middle'>D</text></svg>" />
     <title>ATLAS OS Field</title>
     <style>
       :root {
@@ -1264,7 +1271,7 @@ const html = String.raw`<!doctype html>
           <button data-tab="admin"><span>□</span>Relatórios avançados</button>
         </div>
         <div class="side-group" style="margin-top: auto; border-top: 1px solid var(--line); padding-top: 14px;">
-          <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = window.location.origin.replace('5174', '5173') + '/login';" style="border: 1px solid rgba(239, 68, 68, 0.2); color: #ff5a65; background: rgba(239, 68, 68, 0.05); width: 100%; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 40px; border-radius: 8px; padding: 10px 12px;">
+          <button onclick="localStorage.removeItem('atlas_login_session'); location.reload();" style="border: 1px solid rgba(239, 68, 68, 0.2); color: #ff5a65; background: rgba(239, 68, 68, 0.05); width: 100%; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 40px; border-radius: 8px; padding: 10px 12px;">
             <span style="font-size: 16px;">⎋</span>Sair da Conta
           </button>
         </div>
@@ -2077,7 +2084,7 @@ const html = String.raw`<!doctype html>
                     </select>
                   </label>
                   <button class="primary" type="submit" style="margin-top: 8px;">Salvar Perfil</button>
-                  <button type="button" onclick="localStorage.clear(); sessionStorage.clear(); window.location.href = window.location.origin.replace('5174', '5173') + '/login';" style="border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); color: #ff5a65; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; min-height: 40px; margin-top: 10px; font-size: 13px;">⎋ Sair do Aplicativo</button>
+                  <button type="button" onclick="localStorage.removeItem('atlas_login_session'); location.reload();" style="border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); color: #ff5a65; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; min-height: 40px; margin-top: 10px; font-size: 13px;">⎋ Sair do Aplicativo</button>
                 </form>
               </div>
 
@@ -2491,7 +2498,80 @@ const html = String.raw`<!doctype html>
       <button data-tab="profile"><b>○</b><span>Perfil</span></button>
     </nav>
 
+    <!-- PWA PIN & Setup View -->
+    <div id="login-view" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: var(--body-bg);">
+      <div class="panel" style="width: 100%; max-width: 380px; padding: 28px; border-radius: 16px; text-align: center; box-shadow: var(--shadow);">
+        <div class="brand" style="margin-bottom: 24px;">
+          <div class="brand-mark" style="margin: 0 auto 10px; width: 44px; height: 44px;">D</div>
+          <strong style="font-size: 24px;">ATLAS OS Field</strong>
+          <span style="letter-spacing: 0.15em; font-size: 11px;">Parceiro de Campo</span>
+        </div>
+
+        <!-- Fase 1: Pareamento por E-mail -->
+        <div id="login-phase-email" style="display: grid; gap: 14px;">
+          <p style="font-size: 13px; margin-bottom: 10px;">Entre com suas credenciais para parear este dispositivo móvel.</p>
+          <label style="text-align: left;">
+            E-mail
+            <input type="email" id="login-email" placeholder="tecnico@dashem.com" required style="margin-top: 5px;" />
+          </label>
+          <label style="text-align: left;">
+            Código do Tenant / Empresa
+            <input type="text" id="login-tenant" placeholder="#00 (Deixe em branco se autônomo)" style="margin-top: 5px;" />
+          </label>
+          <button class="primary" id="btn-login-email" style="width: 100%; min-height: 44px; margin-top: 10px;">Avançar</button>
+        </div>
+
+        <!-- Fase 2: Configuração do PIN (Primeiro pareamento) -->
+        <div id="login-phase-pin-setup" style="display: none; grid-gap: 14px;">
+          <p style="font-size: 13px; margin-bottom: 10px;">Cadastre seu PIN de segurança de 4 dígitos para desbloqueio rápido em campo.</p>
+          <div style="display: flex; justify-content: center; gap: 12px; margin: 10px 0;">
+            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-1" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
+            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-2" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
+            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-3" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
+            <input type="password" maxlength="1" class="pin-digit-input" id="pin-setup-4" style="width: 44px; height: 50px; text-align: center; font-size: 24px; font-weight: bold;" />
+          </div>
+          <button class="primary" id="btn-save-pin-setup" style="width: 100%; min-height: 44px; margin-top: 10px;">Confirmar PIN</button>
+        </div>
+
+        <!-- Fase 3: Desbloqueio Rápido por PIN (Uso Diário) -->
+        <div id="login-phase-pin-verify" style="display: none; grid-gap: 14px;">
+          <p id="pin-user-greeting" style="font-size: 14px; font-weight: bold; margin-bottom: 4px;">Olá, Técnico</p>
+          <p style="font-size: 12px; margin-bottom: 12px;">Digite seu PIN de 4 dígitos para entrar.</p>
+          
+          <div style="display: flex; justify-content: center; gap: 16px; margin: 10px 0 20px;">
+            <div class="pin-dot" id="pin-dot-1" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
+            <div class="pin-dot" id="pin-dot-2" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
+            <div class="pin-dot" id="pin-dot-3" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
+            <div class="pin-dot" id="pin-dot-4" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; transition: background 0.1s ease;"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 240px; margin: 0 auto;">
+            <button type="button" class="num-key" data-val="1" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">1</button>
+            <button type="button" class="num-key" data-val="2" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">2</button>
+            <button type="button" class="num-key" data-val="3" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">3</button>
+            <button type="button" class="num-key" data-val="4" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">4</button>
+            <button type="button" class="num-key" data-val="5" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">5</button>
+            <button type="button" class="num-key" data-val="6" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">6</button>
+            <button type="button" class="num-key" data-val="7" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">7</button>
+            <button type="button" class="num-key" data-val="8" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">8</button>
+            <button type="button" class="num-key" data-val="9" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">9</button>
+            <button type="button" id="btn-clear-pin" style="height: 50px; border-radius: 8px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: var(--danger); cursor: pointer;">Limpar</button>
+            <button type="button" class="num-key" data-val="0" style="height: 50px; width: 50px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">0</button>
+            <button type="button" id="btn-switch-user" style="height: 50px; border-radius: 8px; font-size: 11px; font-weight: bold; border: none; background: transparent; color: var(--text-soft); cursor: pointer;">Parear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js")
+            .then((reg) => console.log("Service Worker registrado com sucesso!", reg.scope))
+            .catch((err) => console.warn("Falha ao registrar Service Worker:", err));
+        });
+      }
+
       const apiBase = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
       const todayIso = new Date().toISOString().slice(0, 10);
       const state = { organizations: [], assets: [], workOrders: [], appointments: [], activeOrganizationId: "", activeWorkOrderId: "", filter: "all", agendaMonth: todayIso.slice(0, 7), agendaDate: todayIso, user: { configured: false, tenantCode: "#00", accessLevel: "field_operator" }, formMaterials: [], viewMode: localStorage.getItem("atlas_view_mode") || "list" };
@@ -2537,11 +2617,279 @@ const html = String.raw`<!doctype html>
         }
       };
 
-      async function call(path, options) {
-        const response = await fetch(apiBase + path, { headers: { "content-type": "application/json" }, ...options });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || data.error || "HTTP " + response.status);
-        return data;
+      // --- INDEXEDDB OFFLINE KERNEL ---
+      const DB_NAME = "atlas_offline_db";
+      const DB_VERSION = 1;
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("profile")) db.createObjectStore("profile");
+            if (!db.objectStoreNames.contains("organizations")) db.createObjectStore("organizations");
+            if (!db.objectStoreNames.contains("assets")) db.createObjectStore("assets");
+            if (!db.objectStoreNames.contains("workOrders")) db.createObjectStore("workOrders");
+            if (!db.objectStoreNames.contains("appointments")) db.createObjectStore("appointments");
+            if (!db.objectStoreNames.contains("syncQueue")) db.createObjectStore("syncQueue", { autoIncrement: true });
+          };
+          request.onsuccess = (event) => resolve(event.target.result);
+          request.onerror = (event) => reject(event.target.error);
+        });
+      }
+
+      async function dbGet(storeName, key) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, "readonly");
+          const store = transaction.objectStore(storeName);
+          const request = store.get(key);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function dbPut(storeName, key, value) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, "readwrite");
+          const store = transaction.objectStore(storeName);
+          const request = store.put(value, key);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function dbGetQueue() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction("syncQueue", "readonly");
+          const store = transaction.objectStore("syncQueue");
+          const request = store.openCursor();
+          const items = [];
+          request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+              items.push({ key: cursor.key, value: cursor.value });
+              cursor.continue();
+            } else {
+              resolve(items);
+            }
+          };
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function dbAddQueue(item) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction("syncQueue", "readwrite");
+          const store = transaction.objectStore("syncQueue");
+          const request = store.add(item);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function dbDeleteQueue(key) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction("syncQueue", "readwrite");
+          const store = transaction.objectStore("syncQueue");
+          const request = store.delete(key);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function cacheGetRequest(path, data) {
+        try {
+          if (path.startsWith("/field/profile")) {
+            await dbPut("profile", "current", data);
+          } else if (path.startsWith("/organizations")) {
+            await dbPut("organizations", "list", data.items || data);
+          } else if (path.startsWith("/assets")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            await dbPut("assets", orgId, data.items || data);
+          } else if (path.startsWith("/maintenance/work-orders")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            await dbPut("workOrders", orgId, data.items || data);
+          } else if (path.startsWith("/field/appointments")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            await dbPut("appointments", orgId, data.items || data);
+          }
+        } catch (e) {
+          console.error("Erro ao salvar cache no IndexedDB:", e);
+        }
+      }
+
+      async function getCacheFallback(path) {
+        try {
+          if (path.startsWith("/field/profile")) {
+            return await dbGet("profile", "current");
+          } else if (path.startsWith("/organizations")) {
+            const items = await dbGet("organizations", "list");
+            return items ? { items } : null;
+          } else if (path.startsWith("/assets")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            const items = await dbGet("assets", orgId);
+            return items ? { items } : null;
+          } else if (path.startsWith("/maintenance/work-orders")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            const items = await dbGet("workOrders", orgId);
+            return items ? { items } : null;
+          } else if (path.startsWith("/field/appointments")) {
+            const queryIndex = path.indexOf("?");
+            const query = queryIndex !== -1 ? path.substring(queryIndex) : "";
+            const orgId = new URLSearchParams(query).get("organizationId") || "default";
+            const items = await dbGet("appointments", orgId);
+            return items ? { items } : null;
+          }
+        } catch (e) {
+          console.error("Erro ao ler cache do IndexedDB:", e);
+        }
+        return null;
+      }
+
+      function simulateMutationResponse(path, body) {
+        if (path === "/organizations" || path === "/assets" || path === "/maintenance/work-orders" || path === "/field/appointments" || path === "/expenses" || path === "/inventory") {
+          const generatedId = "mock_" + Math.random().toString(36).substring(2, 10);
+          const entity = { id: generatedId, ...body, createdAt: new Date().toISOString() };
+          
+          updateLocalStateMemory(path, entity);
+          
+          if (path === "/organizations") return { organization: entity };
+          if (path === "/assets") return { asset: entity };
+          if (path === "/maintenance/work-orders") return { workOrder: entity };
+          if (path === "/field/appointments") return { appointment: entity };
+          if (path === "/expenses") return { expense: entity };
+          return entity;
+        }
+        return { ok: true };
+      }
+
+      function updateLocalStateMemory(path, entity) {
+        if (path === "/organizations") {
+          state.organizations = [entity, ...state.organizations];
+          renderSelectors();
+        } else if (path === "/assets") {
+          state.assets = [entity, ...state.assets];
+          renderSelectors();
+        } else if (path === "/maintenance/work-orders") {
+          state.workOrders = [entity, ...state.workOrders];
+          renderWorkOrders();
+        } else if (path === "/field/appointments") {
+          state.appointments = [entity, ...state.appointments];
+          renderAgenda();
+        }
+      }
+
+      let isSyncing = false;
+      async function syncOfflineQueue() {
+        if (isSyncing) return;
+        const queue = await dbGetQueue();
+        if (queue.length === 0) return;
+
+        isSyncing = true;
+        showToast("Sincronização", "Sincronizando " + queue.length + " operações offline...", "info");
+        
+        for (const item of queue) {
+          try {
+            const sessionStr = localStorage.getItem("atlas_login_session");
+            const headers = { 
+              "content-type": "application/json",
+              ...(sessionStr ? { "Authorization": "Bearer " + JSON.parse(sessionStr).token } : {})
+            };
+            const response = await fetch(apiBase + item.value.path, {
+              method: item.value.method,
+              headers,
+              body: item.value.body ? JSON.stringify(item.value.body) : undefined
+            });
+
+            if (response.ok) {
+              await dbDeleteQueue(item.key);
+            } else {
+              console.warn("Falha ao sincronizar item offline, mantendo na fila:", item);
+            }
+          } catch (err) {
+            console.error("Erro na requisição de sincronização offline:", err);
+            break; 
+          }
+        }
+        
+        isSyncing = false;
+        
+        const remainingQueue = await dbGetQueue();
+        if (remainingQueue.length === 0) {
+          showToast("Sucesso", "Todas as alterações foram sincronizadas!", "success");
+          await load(); 
+        }
+      }
+
+      window.addEventListener("online", syncOfflineQueue);
+      setInterval(() => {
+        if (navigator.onLine) {
+          syncOfflineQueue();
+        }
+      }, 30000);
+
+      async function call(path, options = {}) {
+        const method = (options.method || "GET").toUpperCase();
+        const sessionStr = localStorage.getItem("atlas_login_session");
+        const headers = { 
+          "content-type": "application/json",
+          ...(sessionStr ? { "Authorization": "Bearer " + JSON.parse(sessionStr).token } : {})
+        };
+        const fetchOptions = { ...options, headers: { ...headers, ...options.headers } };
+
+        if (method === "GET") {
+          try {
+            const response = await fetch(apiBase + path, fetchOptions);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || data.error || "HTTP " + response.status);
+            
+            await cacheGetRequest(path, data);
+            return data;
+          } catch (error) {
+            console.warn("API GET failed, returning cache fallback for " + path, error);
+            const cachedData = await getCacheFallback(path);
+            if (cachedData !== null) {
+              showToast("Modo Offline", "Exibindo dados do cache local.", "warning");
+              return cachedData;
+            }
+            throw error;
+          }
+        } else {
+          try {
+            const response = await fetch(apiBase + path, fetchOptions);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || data.error || "HTTP " + response.status);
+            return data;
+          } catch (error) {
+            console.warn("API mutation failed, queueing request offline: " + path, error);
+            const queueItem = {
+              path,
+              method,
+              body: options.body ? JSON.parse(options.body) : null,
+              timestamp: new Date().toISOString()
+            };
+            await dbAddQueue(queueItem);
+            
+            showToast("Offline", "Operação salva localmente. Sincronizando ao retomar conexão.", "warning");
+            
+            return simulateMutationResponse(path, queueItem.body);
+          }
+        }
       }
 
       function activeOrganization() {
@@ -6754,9 +7102,220 @@ const html = String.raw`<!doctype html>
         el('btn-stop-voice')?.addEventListener('click', stopVoiceRecording);
       }
 
-      attachDatabaseListeners();
+      // --- Lógica de Autenticação PWA e PIN ---
+      let typedPin = "";
 
-      load().catch((error) => {
+      function updatePinUI() {
+        for (let i = 1; i <= 4; i++) {
+          const dot = el("pin-dot-" + i);
+          if (dot) {
+            if (i <= typedPin.length) {
+              dot.style.background = "var(--accent)";
+            } else {
+              dot.style.background = "transparent";
+            }
+          }
+        }
+      }
+
+      async function handleNumKeyPress(val) {
+        if (typedPin.length < 4) {
+          typedPin += val;
+          updatePinUI();
+        }
+
+        if (typedPin.length === 4) {
+          const deviceProfile = JSON.parse(localStorage.getItem("atlas_device_profile") || "{}");
+          if (!deviceProfile.email || !deviceProfile.deviceToken) {
+            showToast("Erro", "Dispositivo não pareado. Faça o pareamento primeiro.", "danger");
+            resetPinVerification();
+            return;
+          }
+
+          try {
+            const res = await call("/auth/pin/verify", {
+              method: "POST",
+              body: JSON.stringify({
+                email: deviceProfile.email,
+                pin: typedPin,
+                deviceToken: deviceProfile.deviceToken
+              })
+            });
+
+            if (res.ok && res.token) {
+              const session = {
+                username: res.user.name,
+                target: res.user.isStandalone ? "field" : "enterprise",
+                tenantCode: res.user.tenantCode,
+                email: res.user.email,
+                token: res.token,
+                user: res.user,
+                issuedAt: new Date().toISOString()
+              };
+              localStorage.setItem("atlas_login_session", JSON.stringify(session));
+              
+              toggleFieldViewMode(res.user.isStandalone);
+
+              showToast("Bem-vindo", "Desbloqueado com sucesso!", "success");
+              resetPinVerification();
+              await checkAuthAndInitialize();
+            }
+          } catch (err) {
+            showToast("Erro", err.message || "PIN inválido ou falha na autenticação.", "danger");
+            resetPinVerification();
+          }
+        }
+      }
+
+      function resetPinVerification() {
+        typedPin = "";
+        updatePinUI();
+      }
+
+      function toggleFieldViewMode(isStandalone) {
+        const roleBadge = el("profile-chip");
+        if (roleBadge) roleBadge.textContent = isStandalone ? "Autônomo" : "Técnico";
+        
+        const profileRoleBadge = el("profile-pwa-role-badge");
+        if (profileRoleBadge) profileRoleBadge.textContent = isStandalone ? "Autônomo" : "Técnico";
+
+        const adminBtn = document.querySelector('[data-tab="admin"]');
+        if (adminBtn) adminBtn.style.display = isStandalone ? "none" : "flex";
+      }
+
+      function setupPinFlow() {
+        el("btn-login-email")?.addEventListener("click", async () => {
+          const email = el("login-email").value.trim();
+          if (!email) {
+            showToast("Erro", "Informe seu e-mail de pareamento.", "danger");
+            return;
+          }
+
+          try {
+            const apiBaseUrl = new URLSearchParams(location.search).get("api") || "http://localhost:4000";
+            const summaryRes = await fetch(apiBaseUrl + "/owner/summary");
+            const summaryData = await summaryRes.json();
+            const grants = summaryData.accessGrants || [];
+
+            const userGrant = grants.find(g => g.email.toLowerCase() === email.toLowerCase());
+            if (!userGrant) {
+              throw new Error("Usuário não possui convite ou acesso cadastrado.");
+            }
+
+            el("login-phase-email").style.display = "none";
+            el("login-phase-pin-verify").style.display = "none";
+            el("login-phase-pin-setup").style.display = "grid";
+
+            const inputs = document.querySelectorAll(".pin-digit-input");
+            inputs.forEach((input, index) => {
+              input.addEventListener("input", (e) => {
+                if (e.target.value.length === 1 && index < inputs.length - 1) {
+                  inputs[index + 1].focus();
+                }
+              });
+              input.addEventListener("keydown", (e) => {
+                if (e.key === "Backspace" && e.target.value.length === 0 && index > 0) {
+                  inputs[index - 1].focus();
+                }
+              });
+            });
+            inputs[0].focus();
+          } catch (err) {
+            showToast("Falha de Acesso", err.message || "Erro de conexão.", "danger");
+          }
+        });
+
+        el("btn-save-pin-setup")?.addEventListener("click", async () => {
+          const pin1 = el("pin-setup-1").value;
+          const pin2 = el("pin-setup-2").value;
+          const pin3 = el("pin-setup-3").value;
+          const pin4 = el("pin-setup-4").value;
+          const pin = pin1 + pin2 + pin3 + pin4;
+
+          if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+            showToast("Erro", "O PIN deve possuir 4 dígitos numéricos.", "danger");
+            return;
+          }
+
+          const email = el("login-email").value.trim();
+          const deviceToken = "dev_" + Math.random().toString(36).substring(2, 18);
+
+          try {
+            await call("/auth/pin/setup", {
+              method: "POST",
+              body: JSON.stringify({ email, pin, deviceToken })
+            });
+
+            localStorage.setItem("atlas_device_profile", JSON.stringify({
+              email,
+              deviceToken,
+              name: email.split("@")[0].toUpperCase()
+            }));
+
+            showToast("Sucesso", "Pareamento realizado e PIN cadastrado!", "success");
+            
+            el("login-phase-pin-setup").style.display = "none";
+            showPinVerifyPhase();
+          } catch (err) {
+            showToast("Erro", err.message || "Falha ao registrar PIN.", "danger");
+          }
+        });
+
+        document.querySelectorAll(".num-key").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const val = e.currentTarget.dataset.val;
+            if (val !== undefined) {
+              handleNumKeyPress(val);
+            }
+          });
+        });
+
+        el("btn-clear-pin")?.addEventListener("click", resetPinVerification);
+        
+        el("btn-switch-user")?.addEventListener("click", () => {
+          localStorage.removeItem("atlas_device_profile");
+          el("login-phase-pin-verify").style.display = "none";
+          el("login-phase-email").style.display = "grid";
+        });
+      }
+
+      function showPinVerifyPhase() {
+        const deviceProfile = JSON.parse(localStorage.getItem("atlas_device_profile") || "{}");
+        if (deviceProfile.email) {
+          el("login-phase-email").style.display = "none";
+          el("login-phase-pin-setup").style.display = "none";
+          el("login-phase-pin-verify").style.display = "grid";
+          el("pin-user-greeting").textContent = "Olá, " + deviceProfile.name;
+        } else {
+          el("login-phase-pin-verify").style.display = "none";
+          el("login-phase-email").style.display = "grid";
+        }
+      }
+
+      async function checkAuthAndInitialize() {
+        const sessionStr = localStorage.getItem("atlas_login_session");
+        const appContainer = document.querySelector(".app");
+        const loginContainer = el("login-view");
+
+        if (sessionStr) {
+          appContainer.style.display = "grid";
+          loginContainer.style.display = "none";
+          
+          const session = JSON.parse(sessionStr);
+          toggleFieldViewMode(session.user?.isStandalone ?? false);
+          
+          await load(); 
+        } else {
+          appContainer.style.display = "none";
+          loginContainer.style.display = "flex";
+          showPinVerifyPhase();
+        }
+      }
+
+      attachDatabaseListeners();
+      setupPinFlow();
+
+      checkAuthAndInitialize().catch((error) => {
         el("health-label").textContent = "API offline";
         document.querySelector(".status-dot").style.background = "var(--danger)";
         document.querySelector(".status-dot").style.boxShadow = "0 0 14px var(--danger)";
@@ -6767,7 +7326,37 @@ const html = String.raw`<!doctype html>
 </html>`;
 
 function listen(port: number): void {
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
+    const url = request.url ?? "/";
+
+    if (url === "/manifest.json") {
+      try {
+        const manifestPath = join(__dirname, "manifest.json");
+        const content = readFileSync(manifestPath, "utf8");
+        response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+        response.end(content);
+        return;
+      } catch (err) {
+        response.writeHead(500, { "content-type": "text/plain" });
+        response.end("Error loading manifest.json");
+        return;
+      }
+    }
+
+    if (url === "/sw.js") {
+      try {
+        const swPath = join(__dirname, "sw.js");
+        const content = readFileSync(swPath, "utf8");
+        response.writeHead(200, { "content-type": "application/javascript; charset=utf-8" });
+        response.end(content);
+        return;
+      } catch (err) {
+        response.writeHead(500, { "content-type": "text/plain" });
+        response.end("Error loading sw.js");
+        return;
+      }
+    }
+
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.end(html);
   });

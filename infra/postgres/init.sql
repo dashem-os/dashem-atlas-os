@@ -16,6 +16,8 @@ create table if not exists users (
   display_name text not null,
   roles text[] not null default array['viewer'],
   password_hash text not null,
+  pin_hash text,
+  device_token text,
   created_at timestamptz not null default now(),
   unique (organization_id, email)
 );

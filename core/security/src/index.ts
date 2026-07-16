@@ -60,6 +60,20 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return timingSafeEqual(Buffer.from(key, "hex"), derived);
 }
 
+export async function hashPin(pin: string): Promise<string> {
+  if (!/^\d{4}$/.test(pin)) {
+    throw new Error("PIN must be exactly 4 digits");
+  }
+  return hashPassword(pin);
+}
+
+export async function verifyPin(pin: string, hash: string): Promise<boolean> {
+  if (!/^\d{4}$/.test(pin)) {
+    return false;
+  }
+  return verifyPassword(pin, hash);
+}
+
 export function hasPermission(context: OperationalContext, permission: Permission): boolean {
   const roles = context.actor?.roles ?? [];
   const allowed = defaultPolicies

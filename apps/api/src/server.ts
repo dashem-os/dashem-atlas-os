@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Pool, type QueryResultRow } from "pg";
 import { InMemoryTenantRepository } from "@atlas/core-database";
+import { hashPin, verifyPin, signOperationalToken, verifyOperationalToken } from "@atlas/core-security";
 import { createEvent, InMemoryEventBus } from "@atlas/core-events";
 import { Telemetry } from "@atlas/core-observability";
 import { createId, systemClock, type EntityId, type ISODateTime, type OperationalContext, type OrganizationId, type UserId } from "@atlas/core-shared";
@@ -145,6 +146,10 @@ async function migratePostgres(): Promise<void> {
       on atlas_access_grants (tenant_id, email);
 
     alter table assets add column if not exists data jsonb not null default '{}'::jsonb;
+    alter table users add column if not exists pin_hash text;
+    alter table users add column if not exists device_token text;
+    alter table atlas_access_grants add column if not exists pin_hash text;
+    alter table atlas_access_grants add column if not exists device_token text;
 
     alter table work_orders add column if not exists technician_name text;
     alter table work_orders add column if not exists diagnosis text;
@@ -396,6 +401,36 @@ async function migratePostgres(): Promise<void> {
     );
   `);
 
+  try {
+    await pgPool.query("create extension if not exists vector;");
+    await pgPool.query(`
+      create table if not exists atlas_knowledge_base (
+        id text primary key,
+        organization_id text not null references organizations(id),
+        title text not null,
+        content text not null,
+        source text,
+        metadata jsonb not null default '{}'::jsonb,
+        embedding vector(1536),
+        created_at timestamptz not null default now()
+      );
+    `);
+    console.log("Vector extension and atlas_knowledge_base table verified successfully.");
+  } catch (err) {
+    console.warn("Could not initialize vector extension (fallback to standard table layout):", err);
+    await pgPool.query(`
+      create table if not exists atlas_knowledge_base (
+        id text primary key,
+        organization_id text not null references organizations(id),
+        title text not null,
+        content text not null,
+        source text,
+        metadata jsonb not null default '{}'::jsonb,
+        created_at timestamptz not null default now()
+      );
+    `);
+  }
+
   // Seed initial data if table is empty
   const countRes = await pgPool.query("select count(*) from atlas_regional_prices");
   if (Number(countRes.rows[0].count) === 0) {
@@ -631,8 +666,20 @@ const modules = [
 ] as const;
 
 function context(request: IncomingMessage, organizationId?: OrganizationId): OperationalContext {
-  const headerOrganizationId = request.headers["x-organization-id"]?.toString() as OrganizationId | undefined;
-  const actorUserId = request.headers["x-user-id"]?.toString() as UserId | undefined;
+  let headerOrganizationId = request.headers["x-organization-id"]?.toString() as OrganizationId | undefined;
+  let actorUserId = request.headers["x-user-id"]?.toString() as UserId | undefined;
+
+  const authHeader = request.headers["authorization"]?.toString();
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    const jwtSecret = process.env.ATLAS_JWT_SECRET ?? "change-me-before-production";
+    const payload = verifyOperationalToken<{ sub: UserId; organizationId: OrganizationId; roles: string[] }>(token, jwtSecret);
+    if (payload) {
+      actorUserId = payload.sub;
+      headerOrganizationId = payload.organizationId;
+    }
+  }
+
   const tenant = organizationId ?? headerOrganizationId;
 
   return {
@@ -2224,6 +2271,100 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/auth/pin/setup") {
+      const payload = await readJson<{ email: string; pin: string; deviceToken: string }>(request);
+      if (!payload.email || !payload.pin || !payload.deviceToken) {
+        send(response, 400, { error: "bad_request", message: "email, pin and deviceToken are required." });
+        return;
+      }
+      
+      const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
+      if (res.rowCount === 0) {
+        send(response, 404, { error: "not_found", message: "User not found." });
+        return;
+      }
+
+      const grant = res.rows[0];
+      try {
+        const pinHash = await hashPin(payload.pin);
+        await pgPool.query(
+          "update atlas_access_grants set pin_hash = $1, device_token = $2, updated_at = now() where id = $3",
+          [pinHash, payload.deviceToken, grant.id]
+        );
+        send(response, 200, { ok: true });
+      } catch (err: any) {
+        send(response, 400, { error: "bad_request", message: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/auth/pin/verify") {
+      const payload = await readJson<{ email: string; pin: string; deviceToken: string }>(request);
+      if (!payload.email || !payload.pin || !payload.deviceToken) {
+        send(response, 400, { error: "bad_request", message: "email, pin and deviceToken are required." });
+        return;
+      }
+
+      const res = await pgPool.query("select * from atlas_access_grants where lower(email) = lower($1) limit 1", [payload.email.trim()]);
+      if (res.rowCount === 0) {
+        send(response, 401, { error: "unauthorized", message: "Credenciais inválidas." });
+        return;
+      }
+
+      const grant = res.rows[0];
+      if (grant.status !== "active") {
+        send(response, 401, { error: "unauthorized", message: "Usuário inativo." });
+        return;
+      }
+
+      if (!grant.device_token || grant.device_token !== payload.deviceToken) {
+        send(response, 401, { error: "unauthorized", message: "Dispositivo não pareado." });
+        return;
+      }
+
+      if (!grant.pin_hash) {
+        send(response, 401, { error: "unauthorized", message: "PIN não configurado." });
+        return;
+      }
+
+      const isValid = await verifyPin(payload.pin, grant.pin_hash);
+      if (!isValid) {
+        send(response, 401, { error: "unauthorized", message: "PIN incorreto." });
+        return;
+      }
+
+      const jwtSecret = process.env.ATLAS_JWT_SECRET ?? "change-me-before-production";
+      const token = signOperationalToken(
+        {
+          sub: grant.id,
+          email: grant.email,
+          organizationId: grant.tenant_id,
+          roles: [grant.role]
+        },
+        jwtSecret
+      );
+
+      await pgPool.query("update atlas_access_grants set last_login_at = now() where id = $1", [grant.id]);
+
+      const tenantRes = await pgPool.query("select * from atlas_tenants where id = $1 limit 1", [grant.tenant_id]);
+      const tenant = tenantRes.rows[0];
+
+      send(response, 200, {
+        ok: true,
+        token,
+        user: {
+          id: grant.id,
+          email: grant.email,
+          name: grant.name,
+          role: grant.role,
+          organizationId: grant.tenant_id,
+          tenantCode: grant.tenant_code,
+          isStandalone: tenant?.product_line === "field"
+        }
+      });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/assets") {
       const payload = await readJson<Parameters<typeof registerAsset>[0]>(request);
       const asset = await registerAsset(payload, context(request, payload.organizationId), bus);
@@ -3100,6 +3241,74 @@ const server = createServer(async (request, response) => {
         expectedMarginPercent,
         pricingAlertFlags
       });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/ai/embeddings/ingest") {
+      const payload = await readJson<{ organizationId: OrganizationId; title: string; content: string; source?: string; metadata?: object; embedding?: number[] }>(request);
+      if (!payload.organizationId || !payload.title || !payload.content) {
+        send(response, 400, { error: "bad_request", message: "organizationId, title and content are required." });
+        return;
+      }
+
+      const id = createId("kb");
+      const metadata = payload.metadata ? JSON.stringify(payload.metadata) : "{}";
+      
+      const columnRes = await pgPool.query(`
+        select column_name 
+        from information_schema.columns 
+        where table_name = 'atlas_knowledge_base' and column_name = 'embedding'
+      `);
+      const hasVector = (columnRes.rowCount ?? 0) > 0;
+
+      if (hasVector && payload.embedding) {
+        const vectorStr = "[" + payload.embedding.join(",") + "]";
+        await pgPool.query(
+          "insert into atlas_knowledge_base (id, organization_id, title, content, source, metadata, embedding) values ($1, $2, $3, $4, $5, $6, $7)",
+          [id, payload.organizationId, payload.title.trim(), payload.content.trim(), payload.source || null, metadata, vectorStr]
+        );
+      } else {
+        await pgPool.query(
+          "insert into atlas_knowledge_base (id, organization_id, title, content, source, metadata) values ($1, $2, $3, $4, $5, $6)",
+          [id, payload.organizationId, payload.title.trim(), payload.content.trim(), payload.source || null, metadata]
+        );
+      }
+
+      send(response, 201, { ok: true, id });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/ai/retrieve") {
+      const payload = await readJson<{ organizationId: OrganizationId; query: string; embedding?: number[]; limit?: number }>(request);
+      if (!payload.organizationId || !payload.query) {
+        send(response, 400, { error: "bad_request", message: "organizationId and query are required." });
+        return;
+      }
+
+      const limit = payload.limit || 5;
+
+      const columnRes = await pgPool.query(`
+        select column_name 
+        from information_schema.columns 
+        where table_name = 'atlas_knowledge_base' and column_name = 'embedding'
+      `);
+      const hasVector = (columnRes.rowCount ?? 0) > 0;
+
+      if (hasVector && payload.embedding && payload.embedding.length > 0) {
+        const vectorStr = "[" + payload.embedding.join(",") + "]";
+        const res = await pgPool.query(
+          "select id, organization_id, title, content, source, metadata, (embedding <=> $1) as distance from atlas_knowledge_base where organization_id = $2 order by distance asc limit $3",
+          [vectorStr, payload.organizationId, limit]
+        );
+        send(response, 200, { items: res.rows });
+      } else {
+        const searchPattern = "%" + payload.query.trim() + "%";
+        const res = await pgPool.query(
+          "select id, organization_id, title, content, source, metadata from atlas_knowledge_base where organization_id = $1 and (lower(title) like lower($2) or lower(content) like lower($2)) order by created_at desc limit $3",
+          [payload.organizationId, searchPattern, limit]
+        );
+        send(response, 200, { items: res.rows });
+      }
       return;
     }
 
