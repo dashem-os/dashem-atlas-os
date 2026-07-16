@@ -2862,6 +2862,13 @@ const html = String.raw`<!doctype html>
         };
         const fetchOptions = { ...options, headers: { ...headers, ...options.headers } };
 
+        if (path.startsWith("/auth/")) {
+          const response = await fetch(apiBase + path, fetchOptions);
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || data.error || "HTTP " + response.status);
+          return data;
+        }
+
         if (method === "GET") {
           try {
             const response = await fetch(apiBase + path, fetchOptions);

@@ -151,6 +151,7 @@ async function migratePostgres(): Promise<void> {
     alter table atlas_access_grants add column if not exists pin_hash text;
     alter table atlas_access_grants add column if not exists device_token text;
     alter table atlas_access_grants add column if not exists phone text;
+    alter table atlas_access_grants add column if not exists failed_attempts integer default 0;
     create index if not exists atlas_access_grants_phone_idx on atlas_access_grants (phone);
 
     alter table work_orders add column if not exists technician_name text;
@@ -554,6 +555,7 @@ interface AtlasAccessGrant {
   readonly data: Record<string, unknown>;
   readonly pinHash?: string;
   readonly deviceToken?: string;
+  readonly failedAttempts?: number;
 }
 type AppointmentStatus = "scheduled" | "done" | "cancelled";
 interface FieldAppointment {
@@ -973,7 +975,8 @@ function accessGrantFromRow(row: QueryResultRow): AtlasAccessGrant {
     data: fromJson<Record<string, unknown>>(row.data ?? {}),
     ...(row.last_login_at ? { lastLoginAt: new Date(row.last_login_at).toISOString() as ISODateTime } : {}),
     pinHash: row.pin_hash ?? undefined,
-    deviceToken: row.device_token ?? undefined
+    deviceToken: row.device_token ?? undefined,
+    failedAttempts: row.failed_attempts ?? 0
   };
 }
 
@@ -986,8 +989,8 @@ async function listAccessGrantRecords(tenantId?: string): Promise<AtlasAccessGra
 
 async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAccessGrant> {
   await pgPool.query(
-    `insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at, last_login_at, data, phone, pin_hash, device_token)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+    `insert into atlas_access_grants (id, tenant_id, tenant_code, name, email, role, status, permissions, created_at, updated_at, last_login_at, data, phone, pin_hash, device_token, failed_attempts)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
      on conflict (tenant_id, email) do update set
        name = excluded.name,
        role = excluded.role,
@@ -997,7 +1000,8 @@ async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAcce
        data = excluded.data,
        phone = excluded.phone,
        pin_hash = excluded.pin_hash,
-       device_token = excluded.device_token`,
+       device_token = excluded.device_token,
+       failed_attempts = excluded.failed_attempts`,
     [
       grant.id,
       grant.tenantId,
@@ -1013,7 +1017,8 @@ async function saveAccessGrantRecord(grant: AtlasAccessGrant): Promise<AtlasAcce
       json(grant.data),
       grant.phone ?? null,
       grant.pinHash ?? null,
-      grant.deviceToken ?? null
+      grant.deviceToken ?? null,
+      grant.failedAttempts ?? 0
     ]
   );
   const [saved] = (await listAccessGrantRecords(grant.tenantId)).filter((item) => item.email === grant.email);
@@ -2409,8 +2414,13 @@ const server = createServer(async (request, response) => {
         grant = res.rows[0];
       }
 
+      if (grant.failed_attempts >= 5 || grant.status === "suspended") {
+        send(response, 401, { error: "unauthorized", message: "Acesso bloqueado por excesso de tentativas de PIN. Contate o administrador." });
+        return;
+      }
+
       if (grant.status !== "active") {
-        send(response, 401, { error: "unauthorized", message: "Usuário inativo." });
+        send(response, 401, { error: "unauthorized", message: "Usuário inativo ou suspenso." });
         return;
       }
 
@@ -2421,7 +2431,20 @@ const server = createServer(async (request, response) => {
 
       const isValid = await verifyPin(payload.pin, grant.pin_hash);
       if (!isValid) {
-        send(response, 401, { error: "unauthorized", message: "PIN incorreto." });
+        const attempts = (grant.failed_attempts ?? 0) + 1;
+        if (attempts >= 5) {
+          await pgPool.query(
+            "update atlas_access_grants set failed_attempts = $1, status = 'suspended', updated_at = now() where id = $2",
+            [attempts, grant.id]
+          );
+          send(response, 401, { error: "unauthorized", message: "PIN incorreto. Acesso bloqueado por excesso de tentativas." });
+        } else {
+          await pgPool.query(
+            "update atlas_access_grants set failed_attempts = $1, updated_at = now() where id = $2",
+            [attempts, grant.id]
+          );
+          send(response, 401, { error: "unauthorized", message: `PIN incorreto. Tentativa ${attempts} de 5.` });
+        }
         return;
       }
 
@@ -2433,6 +2456,12 @@ const server = createServer(async (request, response) => {
         );
       }
 
+      // Reset failed attempts and update last login
+      await pgPool.query(
+        "update atlas_access_grants set failed_attempts = 0, last_login_at = now() where id = $1",
+        [grant.id]
+      );
+
       const jwtSecret = process.env.ATLAS_JWT_SECRET ?? "change-me-before-production";
       const token = signOperationalToken(
         {
@@ -2443,8 +2472,6 @@ const server = createServer(async (request, response) => {
         },
         jwtSecret
       );
-
-      await pgPool.query("update atlas_access_grants set last_login_at = now() where id = $1", [grant.id]);
 
       const tenantRes = await pgPool.query("select * from atlas_tenants where id = $1 limit 1", [grant.tenant_id]);
       const tenant = tenantRes.rows[0];

@@ -8,3 +8,5 @@ coverage/
 .atlas-data/
 .DS_Store
 Thumbs.db
+scratch/
+
