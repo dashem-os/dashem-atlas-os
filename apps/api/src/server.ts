@@ -2313,10 +2313,10 @@ const server = createServer(async (request, response) => {
       const cleanPhone = rawPhone.replace(/\D/g, "");
       const res = await pgPool.query(
         `select * from atlas_access_grants 
-         where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+         where right(regexp_replace(phone, '\\D', '', 'g'), 11) = right($1, 11)
            and status = 'active'
          limit 1`,
-        [rawPhone, cleanPhone]
+        [cleanPhone]
       );
       if (res.rowCount === 0) {
         send(response, 404, { error: "not_found", message: "Celular não cadastrado ou sem permissão PWA." });
@@ -2354,9 +2354,9 @@ const server = createServer(async (request, response) => {
         const cleanPhone = rawPhone.replace(/\D/g, "");
         const res = await pgPool.query(
           `select * from atlas_access_grants 
-           where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+           where right(regexp_replace(phone, '\\D', '', 'g'), 11) = right($1, 11)
            limit 1`,
-          [rawPhone, cleanPhone]
+          [cleanPhone]
         );
         if (res.rowCount === 0) {
           send(response, 404, { error: "not_found", message: "Usuário não encontrado por celular." });
@@ -2398,9 +2398,9 @@ const server = createServer(async (request, response) => {
         const cleanPhone = rawPhone.replace(/\D/g, "");
         const res = await pgPool.query(
           `select * from atlas_access_grants 
-           where (phone = $1 or replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $2)
+           where right(regexp_replace(phone, '\\D', '', 'g'), 11) = right($1, 11)
            limit 1`,
-          [rawPhone, cleanPhone]
+          [cleanPhone]
         );
         if (res.rowCount === 0) {
           send(response, 401, { error: "unauthorized", message: "Credenciais inválidas." });

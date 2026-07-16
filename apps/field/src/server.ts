@@ -2511,17 +2511,64 @@ const html = String.raw`<!doctype html>
           <span style="letter-spacing: 0.15em; font-size: 11px;">Parceiro de Campo</span>
         </div>
 
-        <div id="login-form-pwa" style="display: grid; gap: 14px;">
-          <p style="font-size: 13px; margin-bottom: 10px; color: var(--text-soft);">Acesse informando seu número de celular e PIN.</p>
+        <!-- Passo 1: Digitar Celular -->
+        <div id="login-step-phone" style="display: grid; gap: 14px;">
+          <p style="font-size: 13px; margin-bottom: 10px; color: var(--text-soft);">Acesse informando seu número de celular.</p>
           <label style="text-align: left; display: grid; gap: 6px; font-weight: 500;">
             Celular
-            <input type="tel" id="login-phone" placeholder="(11) 99999-9999" required style="width: 100%; min-height: 40px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; font-size: 16px;" />
+            <input type="tel" id="login-phone" placeholder="(11) 99999-9999" required style="width: 100%; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--input-bg); color: var(--text); font-size: 16px;" />
           </label>
-          <label style="text-align: left; display: grid; gap: 6px; font-weight: 500;">
-            PIN de Acesso
-            <input type="password" id="login-pin" maxlength="4" placeholder="4 dígitos" required style="width: 100%; min-height: 40px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; text-align: center; letter-spacing: 0.5em; font-size: 16px;" />
-          </label>
-          <button class="primary" id="btn-login-pwa" style="width: 100%; min-height: 44px; margin-top: 10px; border-radius: 8px; font-weight: bold; font-size: 16px;">Entrar</button>
+          <button class="primary" id="btn-phone-next" style="width: 100%; min-height: 46px; margin-top: 10px; border-radius: 8px; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            Avançar <span style="font-size: 18px;">→</span>
+          </button>
+        </div>
+
+        <!-- Passo 2: Digitar PIN para Entrar -->
+        <div id="login-step-pin-verify" style="display: none; gap: 10px;">
+          <a href="#" id="lnk-back-to-phone-verify" style="font-size: 11px; font-weight: bold; text-decoration: none; color: var(--accent); display: block; margin-bottom: 12px; text-transform: uppercase;">
+            ← Alterar Telefone (<span id="txt-phone-verify"></span>)
+          </a>
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">Digite seu PIN</h3>
+          <p style="font-size: 12px; color: var(--text-soft); margin-bottom: 14px;">Insira o PIN de 4 dígitos para acessar o sistema.</p>
+          
+          <div style="display: flex; justify-content: center; gap: 12px; margin: 10px 0;">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-verify-box" id="pin-verify-1" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-verify-box" id="pin-verify-2" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-verify-box" id="pin-verify-3" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-verify-box" id="pin-verify-4" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+          </div>
+        </div>
+
+        <!-- Passo 3: Criar PIN (Primeiro acesso) -->
+        <div id="login-step-pin-setup" style="display: none; gap: 10px;">
+          <a href="#" id="lnk-back-to-phone-setup" style="font-size: 11px; font-weight: bold; text-decoration: none; color: var(--accent); display: block; margin-bottom: 12px; text-transform: uppercase;">
+            ← Alterar Telefone (<span id="txt-phone-setup"></span>)
+          </a>
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">Cadastre seu PIN</h3>
+          <p style="font-size: 12px; color: var(--text-soft); margin-bottom: 14px;">Cadastre um PIN de segurança de 4 dígitos.</p>
+          
+          <div style="display: flex; justify-content: center; gap: 12px; margin: 10px 0;">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-setup-box" id="pin-setup-1" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-setup-box" id="pin-setup-2" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-setup-box" id="pin-setup-3" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-setup-box" id="pin-setup-4" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+          </div>
+        </div>
+
+        <!-- Passo 4: Confirmar PIN -->
+        <div id="login-step-pin-confirm" style="display: none; gap: 10px;">
+          <a href="#" id="lnk-back-to-pin-setup" style="font-size: 11px; font-weight: bold; text-decoration: none; color: var(--accent); display: block; margin-bottom: 12px; text-transform: uppercase;">
+            ← Voltar para criar PIN
+          </a>
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">Confirme seu PIN</h3>
+          <p style="font-size: 12px; color: var(--text-soft); margin-bottom: 14px;">Confirme o PIN de 4 dígitos digitado anteriormente.</p>
+          
+          <div style="display: flex; justify-content: center; gap: 12px; margin: 10px 0;">
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-confirm-box" id="pin-confirm-1" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-confirm-box" id="pin-confirm-2" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-confirm-box" id="pin-confirm-3" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+            <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-confirm-box" id="pin-confirm-4" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
+          </div>
         </div>
       </div>
     </div>
@@ -7066,74 +7113,6 @@ const html = String.raw`<!doctype html>
       }
 
       // --- Lógica de Autenticação PWA e PIN ---
-      let typedPin = "";
-
-      function updatePinUI() {
-        for (let i = 1; i <= 4; i++) {
-          const dot = el("pin-dot-" + i);
-          if (dot) {
-            if (i <= typedPin.length) {
-              dot.style.background = "var(--accent)";
-            } else {
-              dot.style.background = "transparent";
-            }
-          }
-        }
-      }
-
-      async function handleNumKeyPress(val) {
-        if (typedPin.length < 4) {
-          typedPin += val;
-          updatePinUI();
-        }
-
-        if (typedPin.length === 4) {
-          const deviceProfile = JSON.parse(localStorage.getItem("atlas_device_profile") || "{}");
-          if (!deviceProfile.email || !deviceProfile.deviceToken) {
-            showToast("Erro", "Dispositivo não pareado. Faça o pareamento primeiro.", "danger");
-            resetPinVerification();
-            return;
-          }
-
-          try {
-            const res = await call("/auth/pin/verify", {
-              method: "POST",
-              body: JSON.stringify({
-                email: deviceProfile.email,
-                pin: typedPin,
-                deviceToken: deviceProfile.deviceToken
-              })
-            });
-
-            if (res.ok && res.token) {
-              const session = {
-                username: res.user.name,
-                target: res.user.isStandalone ? "field" : "enterprise",
-                tenantCode: res.user.tenantCode,
-                email: res.user.email,
-                token: res.token,
-                user: res.user,
-                issuedAt: new Date().toISOString()
-              };
-              localStorage.setItem("atlas_login_session", JSON.stringify(session));
-              
-              toggleFieldViewMode(res.user.isStandalone);
-
-              showToast("Bem-vindo", "Desbloqueado com sucesso!", "success");
-              resetPinVerification();
-              await checkAuthAndInitialize();
-            }
-          } catch (err) {
-            showToast("Erro", err.message || "PIN inválido ou falha na autenticação.", "danger");
-            resetPinVerification();
-          }
-        }
-      }
-
-      function resetPinVerification() {
-        typedPin = "";
-        updatePinUI();
-      }
 
       function toggleFieldViewMode(isStandalone) {
         const roleBadge = el("profile-chip");
@@ -7147,44 +7126,145 @@ const html = String.raw`<!doctype html>
       }
 
       function setupPinFlow() {
-        // Ensure deviceToken exists in localStorage
         let deviceToken = localStorage.getItem("atlas_device_token");
         if (!deviceToken) {
           deviceToken = "dev_" + Math.random().toString(36).substring(2, 18);
           localStorage.setItem("atlas_device_token", deviceToken);
         }
 
-        // Apply dynamic phone mask (e.g. (11) 99999-9999)
         const phoneInput = el("login-phone");
         if (phoneInput) {
           phoneInput.addEventListener("input", (e) => {
             let x = e.target.value.replace(/\D/g, "").match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
             e.target.value = !x[2] ? x[1] : "(" + x[1] + ") " + x[2] + (x[3] ? "-" + x[3] : "");
+            
+            // Auto-advance if 11 digits are typed
+            const digits = e.target.value.replace(/\D/g, "");
+            if (digits.length === 11) {
+              advanceFromPhone();
+            }
+          });
+          phoneInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              advanceFromPhone();
+            }
           });
         }
 
-        const loginFormSubmit = async () => {
-          const phone = el("login-phone").value.trim();
-          const pin = el("login-pin").value.trim();
-
-          if (!phone || !pin) {
-            showToast("Erro", "Preencha o celular e o PIN.", "danger");
-            return;
-          }
-
-          if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-            showToast("Erro", "O PIN deve ter exatamente 4 dígitos.", "danger");
+        el("btn-phone-next")?.addEventListener("click", advanceFromPhone);
+        
+        async function advanceFromPhone() {
+          const rawPhone = el("login-phone").value;
+          const phoneDigits = rawPhone.replace(/\D/g, "");
+          if (phoneDigits.length < 10) {
+            showToast("Erro", "Celular inválido. Digite DDD + Número.", "danger");
             return;
           }
 
           try {
+            // Check if phone exists and has PIN
+            const res = await call("/auth/pwa/check", {
+              method: "POST",
+              body: JSON.stringify({ phone: phoneDigits })
+            });
+
+            if (res.ok) {
+              // Hide phone step
+              el("login-step-phone").style.display = "none";
+              
+              if (res.pinConfigured) {
+                // Show PIN Verification step
+                el("login-step-pin-verify").style.display = "grid";
+                el("txt-phone-verify").textContent = rawPhone;
+                setupPinBoxes("pin-verify-box", onVerifyPinComplete);
+              } else {
+                // Show PIN Setup step (first access)
+                el("login-step-pin-setup").style.display = "grid";
+                el("txt-phone-setup").textContent = rawPhone;
+                setupPinBoxes("pin-setup-box", onSetupPinComplete);
+              }
+            }
+          } catch (err) {
+            showToast("Acesso Negado", err.message || "Celular não cadastrado ou sem permissão PWA.", "danger");
+          }
+        }
+
+        // Back button handlers
+        el("lnk-back-to-phone-verify")?.addEventListener("click", (e) => {
+          e.preventDefault();
+          resetAllSteps();
+        });
+        el("lnk-back-to-phone-setup")?.addEventListener("click", (e) => {
+          e.preventDefault();
+          resetAllSteps();
+        });
+        el("lnk-back-to-pin-setup")?.addEventListener("click", (e) => {
+          e.preventDefault();
+          el("login-step-pin-confirm").style.display = "none";
+          el("login-step-pin-setup").style.display = "grid";
+          setupPinBoxes("pin-setup-box", onSetupPinComplete);
+        });
+
+        function resetAllSteps() {
+          el("login-step-phone").style.display = "grid";
+          el("login-step-pin-verify").style.display = "none";
+          el("login-step-pin-setup").style.display = "none";
+          el("login-step-pin-confirm").style.display = "none";
+          clearAllPinBoxes();
+          setTimeout(() => el("login-phone").focus(), 100);
+        }
+
+        function clearAllPinBoxes() {
+          document.querySelectorAll(".pin-digit-box").forEach(box => {
+            box.value = "";
+          });
+        }
+
+        // PIN boxes autofocus and keyboard management helper
+        function setupPinBoxes(className, onCompleteCallback) {
+          const boxes = Array.from(document.querySelectorAll("." + className));
+          boxes.forEach((box, index) => {
+            box.value = ""; // Clear values
+            
+            // Event listener for typing
+            box.oninput = (e) => {
+              const val = e.target.value;
+              if (val.length === 1) {
+                if (index < boxes.length - 1) {
+                  boxes[index + 1].focus();
+                } else {
+                  box.blur();
+                  // Finished typing 4 digits
+                  const pin = boxes.map(b => b.value).join("");
+                  onCompleteCallback(pin);
+                }
+              }
+            };
+
+            // Event listener for backspace
+            box.onkeydown = (e) => {
+              if (e.key === "Backspace") {
+                if (box.value === "" && index > 0) {
+                  boxes[index - 1].focus();
+                  boxes[index - 1].value = "";
+                } else {
+                  box.value = "";
+                }
+              }
+            };
+          });
+          
+          // Focus the first box
+          setTimeout(() => boxes[0]?.focus(), 100);
+        }
+
+        // PIN Verification complete handler
+        async function onVerifyPinComplete(pin) {
+          const phone = el("login-phone").value.replace(/\D/g, "");
+          try {
             const res = await call("/auth/pin/verify", {
               method: "POST",
-              body: JSON.stringify({
-                phone,
-                pin,
-                deviceToken
-              })
+              body: JSON.stringify({ phone, pin, deviceToken })
             });
 
             if (res.ok && res.token) {
@@ -7200,22 +7280,72 @@ const html = String.raw`<!doctype html>
               localStorage.setItem("atlas_login_session", JSON.stringify(session));
               
               toggleFieldViewMode(res.user.isStandalone);
-
               showToast("Bem-vindo", "Acesso liberado com sucesso!", "success");
               await checkAuthAndInitialize();
             }
           } catch (err) {
-            showToast("Falha de Login", err.message || "Erro na autenticação.", "danger");
+            showToast("Falha de Login", err.message || "PIN inválido ou incorreto.", "danger");
+            setupPinBoxes("pin-verify-box", onVerifyPinComplete); // Reset and focus
           }
-        };
+        }
 
-        el("btn-login-pwa")?.addEventListener("click", loginFormSubmit);
-        el("login-pin")?.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") loginFormSubmit();
-        });
-        el("login-phone")?.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") el("login-pin").focus();
-        });
+        let tempCreatedPin = "";
+
+        // PIN Setup complete handler
+        function onSetupPinComplete(pin) {
+          tempCreatedPin = pin;
+          el("login-step-pin-setup").style.display = "none";
+          el("login-step-pin-confirm").style.display = "grid";
+          setupPinBoxes("pin-confirm-box", onConfirmPinComplete);
+        }
+
+        // PIN Confirm complete handler
+        async function onConfirmPinComplete(pin) {
+          if (pin !== tempCreatedPin) {
+            showToast("Erro", "Os PINs não coincidem. Tente cadastrar novamente.", "danger");
+            el("login-step-pin-confirm").style.display = "none";
+            el("login-step-pin-setup").style.display = "grid";
+            setupPinBoxes("pin-setup-box", onSetupPinComplete);
+            return;
+          }
+
+          const phone = el("login-phone").value.replace(/\D/g, "");
+          try {
+            // First register/setup the PIN
+            const setupRes = await call("/auth/pin/setup", {
+              method: "POST",
+              body: JSON.stringify({ phone, pin, deviceToken })
+            });
+
+            if (setupRes.ok) {
+              // Automatically verify/log in
+              const verifyRes = await call("/auth/pin/verify", {
+                method: "POST",
+                body: JSON.stringify({ phone, pin, deviceToken })
+              });
+
+              if (verifyRes.ok && verifyRes.token) {
+                const session = {
+                  username: verifyRes.user.name,
+                  target: verifyRes.user.isStandalone ? "field" : "enterprise",
+                  tenantCode: verifyRes.user.tenantCode,
+                  email: verifyRes.user.email,
+                  token: verifyRes.token,
+                  user: verifyRes.user,
+                  issuedAt: new Date().toISOString()
+                };
+                localStorage.setItem("atlas_login_session", JSON.stringify(session));
+                
+                toggleFieldViewMode(verifyRes.user.isStandalone);
+                showToast("Bem-vindo", "PIN cadastrado e acesso liberado!", "success");
+                await checkAuthAndInitialize();
+              }
+            }
+          } catch (err) {
+            showToast("Erro no Cadastro", err.message || "Falha ao registrar PIN.", "danger");
+            resetAllSteps();
+          }
+        }
       }
 
       async function checkAuthAndInitialize() {
