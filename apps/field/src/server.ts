@@ -2570,6 +2570,36 @@ const html = String.raw`<!doctype html>
             <input type="password" inputmode="numeric" maxlength="1" class="pin-digit-box pin-confirm-box" id="pin-confirm-4" pattern="\d" style="width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border-radius: 10px; border: 2px solid var(--line); background: var(--input-bg); color: var(--text);" />
           </div>
         </div>
+
+        <!-- Banner de Instalação PWA (Download) -->
+        <div id="pwa-install-banner" style="display: none; margin-top: 24px; padding: 16px; border-radius: 12px; background: rgba(73, 180, 232, 0.06); border: 1px dashed var(--line); text-align: left; align-items: center; gap: 14px;">
+          <div style="background: var(--accent); color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px;">
+            📥
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <strong style="display: block; font-size: 13px; color: var(--text);">Instalar Aplicativo</strong>
+            <span style="display: block; font-size: 11px; color: var(--text-soft);">Clique para adicionar o app à sua tela inicial.</span>
+          </div>
+          <button id="btn-pwa-install" class="primary" style="padding: 6px 12px; font-size: 11px; border-radius: 6px; min-height: unset; width: auto; font-weight: bold; flex-shrink: 0; margin: 0;">
+            Instalar
+          </button>
+        </div>
+
+        <div id="pwa-installed-banner" style="display: none; margin-top: 24px; padding: 16px; border-radius: 12px; background: rgba(46, 213, 115, 0.06); border: 1px solid rgba(46, 213, 115, 0.15); text-align: left; align-items: center; gap: 14px;">
+          <div style="background: #2ed573; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; font-weight: bold;">
+            ✓
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <strong style="display: block; font-size: 13px; color: var(--text);">APP INSTALADO</strong>
+            <span style="display: block; font-size: 11px; color: var(--text-soft);">O portal já está pronto na tela inicial.</span>
+          </div>
+        </div>
+
+        <!-- Assinatura Rodapé -->
+        <div style="margin-top: 24px; font-size: 9px; color: var(--text-soft); letter-spacing: 0.1em; font-weight: bold; line-height: 1.5; text-transform: uppercase;">
+          ATLAS OS FIELD • V1.0<br/>
+          DASHEM TECHNOLOGIES
+        </div>
       </div>
     </div>
 
@@ -7382,6 +7412,47 @@ const html = String.raw`<!doctype html>
 
       attachDatabaseListeners();
       setupPinFlow();
+
+      // PWA Install Prompt handling
+      let deferredPrompt = null;
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show the install banner
+        const installBanner = el("pwa-install-banner");
+        const installedBanner = el("pwa-installed-banner");
+        if (installBanner) installBanner.style.display = "flex";
+        if (installedBanner) installedBanner.style.display = "none";
+      });
+
+      el("btn-pwa-install")?.addEventListener("click", async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          console.log("PWA instalado com sucesso!");
+          showInstallSuccess();
+        }
+        deferredPrompt = null;
+      });
+
+      window.addEventListener("appinstalled", () => {
+        console.log("PWA instalado detectado.");
+        showInstallSuccess();
+      });
+
+      // If PWA is run standalone (already installed and opened from screen)
+      if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) {
+        showInstallSuccess();
+      }
+
+      function showInstallSuccess() {
+        const installBanner = el("pwa-install-banner");
+        const installedBanner = el("pwa-installed-banner");
+        if (installBanner) installBanner.style.display = "none";
+        if (installedBanner) installedBanner.style.display = "flex";
+      }
 
       checkAuthAndInitialize().catch((error) => {
         el("health-label").textContent = "API offline";
